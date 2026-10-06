@@ -2,9 +2,11 @@ package ru.pushtoweb.app
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
@@ -13,6 +15,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -21,6 +24,12 @@ import androidx.webkit.WebViewAssetLoader
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+    private var pendingBackupJson: String? = null
+    private var pendingFileName: String? = null
+
+    companion object {
+        private const val REQUEST_CODE_CREATE_FILE = 2001
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -106,6 +115,56 @@ class MainActivity : AppCompatActivity() {
             webView.goBack()
         } else {
             super.onBackPressed()
+        }
+    }
+
+    fun saveBackupWithStoragePicker(jsonContent: String, fileName: String) {
+        pendingBackupJson = jsonContent
+        pendingFileName = fileName
+        runOnUiThread {
+            try {
+                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "application/json"
+                    putExtra(Intent.EXTRA_TITLE, if (fileName.isNotEmpty()) fileName else "pushtoweb_backup.json")
+                }
+                startActivityForResult(intent, REQUEST_CODE_CREATE_FILE)
+            } catch (e: Exception) {
+                saveToDownloadsDirectly(jsonContent, fileName)
+            }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_CREATE_FILE && resultCode == RESULT_OK) {
+            data?.data?.let { uri ->
+                val content = pendingBackupJson
+                if (content != null) {
+                    try {
+                        contentResolver.openOutputStream(uri)?.use { os ->
+                            os.write(content.toByteArray(Charsets.UTF_8))
+                        }
+                        Toast.makeText(this, "Бэкап успешно сохранен!", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(this, "Ошибка записи файла: ${e.message}", Toast.LENGTH_SHORT).show()
+                    } finally {
+                        pendingBackupJson = null
+                        pendingFileName = null
+                    }
+                }
+            }
+        }
+    }
+
+    private fun saveToDownloadsDirectly(jsonContent: String, fileName: String) {
+        try {
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val file = java.io.File(downloadsDir, if (fileName.isNotEmpty()) fileName else "pushtoweb_backup.json")
+            file.writeText(jsonContent)
+            Toast.makeText(this, "Бэкап сохранен в папку Загрузки: ${file.name}", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Ошибка сохранения файла: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 }

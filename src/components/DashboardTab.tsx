@@ -46,6 +46,22 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const isBotConfigured = Boolean(settings.telegramBotToken && settings.telegramChatId);
   const isNativeAndroid = typeof window !== 'undefined' && Boolean(window.AndroidBridge?.isNativeApp?.());
 
+  const [hasNotifPermission, setHasNotifPermission] = React.useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.AndroidBridge?.isNotificationAccessGranted) {
+      return Boolean(window.AndroidBridge.isNotificationAccessGranted());
+    }
+    return true;
+  });
+
+  React.useEffect(() => {
+    if (isNativeAndroid && window.AndroidBridge?.isNotificationAccessGranted) {
+      const check = () => setHasNotifPermission(Boolean(window.AndroidBridge?.isNotificationAccessGranted?.()));
+      check();
+      const interval = setInterval(check, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isNativeAndroid]);
+
   // Master Service switch handler
   const handleToggleService = () => {
     const nextVal = !isServiceRunning;
@@ -131,6 +147,36 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-5 space-y-3.5">
+      {/* ⚠️ NOTIFICATION ACCESS WARNING BANNER (If running inside APK without Notification Access) */}
+      {isNativeAndroid && !hasNotifPermission && (
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-300 text-xs space-y-2.5 shadow-md animate-in fade-in">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 font-bold text-amber-400 text-sm">
+              <AlertTriangle className="w-4 h-4 shrink-0 animate-bounce" />
+              <span>Доступ к уведомлениям не предоставлен в Android!</span>
+            </div>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 shrink-0">
+              Внимание
+            </span>
+          </div>
+
+          <p className="text-[11px] leading-relaxed text-slate-300">
+            Пересылка SMS включена, но для перехвата push-уведомлений от банков (Сбер, Т-Банк) и мессенджеров необходимо разрешить <b>«Доступ к уведомлениям»</b> для PushToWeb в настройках Android.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              window.AndroidBridge?.requestNotificationAccess?.();
+            }}
+            className="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span>Разрешить доступ к уведомлениям в настройках Android</span>
+          </button>
+        </div>
+      )}
+
       {/* 🚀 COMPACT MASTER SERVICE SWITCH BAR */}
       <div
         onClick={handleToggleService}
