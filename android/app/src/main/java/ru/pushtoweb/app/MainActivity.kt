@@ -5,15 +5,18 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
+import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.webkit.WebViewAssetLoader
 
 class MainActivity : AppCompatActivity() {
 
@@ -32,6 +35,10 @@ class MainActivity : AppCompatActivity() {
         // Auto start background keep-alive service
         ForwarderForegroundService.start(this)
 
+        val assetLoader = WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .build()
+
         webView = WebView(this).apply {
             settings.apply {
                 javaScriptEnabled = true
@@ -39,44 +46,33 @@ class MainActivity : AppCompatActivity() {
                 databaseEnabled = true
                 allowFileAccess = true
                 allowContentAccess = true
+                allowFileAccessFromFileURLs = true
+                allowUniversalAccessFromFileURLs = true
                 cacheMode = WebSettings.LOAD_DEFAULT
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             }
             webViewClient = object : WebViewClient() {
-                override fun onReceivedError(
+                override fun shouldInterceptRequest(
                     view: WebView?,
-                    request: WebResourceRequest?,
-                    error: WebResourceError?
-                ) {
-                    super.onReceivedError(view, request, error)
-                    // If remote load fails, automatically fallback to local offline asset
-                    val failingUrl = request?.url?.toString() ?: ""
-                    if (!failingUrl.startsWith("file:///android_asset/")) {
-                        view?.loadUrl("file:///android_asset/web/index.html")
-                    }
+                    request: WebResourceRequest?
+                ): WebResourceResponse? {
+                    val uri = request?.url ?: return null
+                    return assetLoader.shouldInterceptRequest(uri)
                 }
             }
-            webChromeClient = WebChromeClient()
+            webChromeClient = object : WebChromeClient() {
+                override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+                    Log.d("PushToWebJS", "${consoleMessage?.message()} -- From line ${consoleMessage?.lineNumber()} of ${consoleMessage?.sourceId()}")
+                    return true
+                }
+            }
             addJavascriptInterface(AndroidBridge(this@MainActivity), "AndroidBridge")
         }
 
         setContentView(webView)
 
-        // Check if bundled web asset exists
-        val hasLocalAsset = try {
-            assets.open("web/index.html").close()
-            true
-        } catch (e: Exception) {
-            false
-        }
-
-        val targetUrl = if (hasLocalAsset) {
-            "file:///android_asset/web/index.html"
-        } else {
-            Config.APP_WEB_URL
-        }
-
-        webView.loadUrl(targetUrl)
+        // Load via secure asset loader (supports ES modules and local storage)
+        webView.loadUrl(Config.APP_WEB_URL)
     }
 
     private fun loadSavedConfig() {
