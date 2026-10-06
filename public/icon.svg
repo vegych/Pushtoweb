@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#0369a1" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="16" y="16" width="480" height="480" rx="96" stroke="#38bdf8" stroke-width="4" stroke-opacity="0.3"/>
+  
+  <!-- Telegram plane styled graphic with message bubble -->
+  <path d="M128 256 C128 185 185 128 256 128 C327 128 384 185 384 256 C384 327 327 384 256 384 C225 384 196 373 174 354 L128 368 L142 322 C133 303 128 280 128 256 Z" fill="#0f172a" fill-opacity="0.8" stroke="url(#glow)" stroke-width="12" stroke-linejoin="round"/>
+  
+  <!-- Forwarding Paper Plane / Arrow -->
+  <path d="M208 256 L336 192 L280 320 L248 272 L208 256 Z" fill="url(#glow)"/>
+  <path d="M248 272 L280 232" stroke="#0284c7" stroke-width="6" stroke-linecap="round"/>
+  
+  <!-- 2FA Lock Badge -->
+  <circle cx="340" cy="340" r="48" fill="#10b981"/>
+  <path d="M330 336 V328 C330 322.5 334.5 318 340 318 C345.5 318 350 322.5 350 328 V336 M324 336 H356 V358 H324 Z" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

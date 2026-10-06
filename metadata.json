@@ -1,0 +1,6 @@
+{
+  "name": "SMS & Push to Telegram Forwarder",
+  "description": "Сервис и панель управления для пересылки SMS и уведомлений приложений в Telegram бот с гибкой фильтрацией приложений, банковских пушей и 2FA кодов.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
