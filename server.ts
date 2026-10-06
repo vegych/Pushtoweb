@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { PREDEFINED_APPS, DEFAULT_SETTINGS } from './src/data/predefinedApps.js';
@@ -1008,13 +1009,27 @@ class MainActivity : AppCompatActivity() {
 
 ## Как собрать APK за 1 минуту:
 1. Распакуйте этот архив.
-2. Откройте папку проекта в бесплатной программе **Android Studio**.
+2. Откройте папку проекта в бесплатной программе **Android Studio** или запустите \`./gradlew assembleDebug\`.
 3. Нажмите меню **Build** → **Build Bundle(s) / APK(s)** → **Build APK(s)**.
 4. Скопируйте полученный \`app-debug.apk\` на телефон и установите.
 5. При запуске приложение само попросит необходимые разрешения на SMS и доступ к уведомлениям.
 
 Приложение работает 100% автономно в фоне 24/7!
 `.trim());
+
+      // 13. Gradle wrapper files & scripts
+      const wrapperJarPath = path.join(__dirname, 'android/gradle/wrapper/gradle-wrapper.jar');
+      if (fs.existsSync(wrapperJarPath)) {
+        zip.file("gradle/wrapper/gradle-wrapper.jar", fs.readFileSync(wrapperJarPath));
+      }
+      const wrapperPropPath = path.join(__dirname, 'android/gradle/wrapper/gradle-wrapper.properties');
+      if (fs.existsSync(wrapperPropPath)) {
+        zip.file("gradle/wrapper/gradle-wrapper.properties", fs.readFileSync(wrapperPropPath));
+      }
+      const gradlewPath = path.join(__dirname, 'android/gradlew');
+      if (fs.existsSync(gradlewPath)) {
+        zip.file("gradlew", fs.readFileSync(gradlewPath), { unixPermissions: "755" });
+      }
 
       const content = await zip.generateAsync({ type: 'nodebuffer' });
       res.setHeader('Content-Type', 'application/zip');

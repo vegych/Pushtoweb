@@ -52,10 +52,16 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
 
-      - name: Grant execute permission for gradlew
+      - name: Ensure Gradle Wrapper exists
         run: |
           cd android
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "gradle-wrapper.jar missing, generating via Gradle CLI..."
+            gradle wrapper --gradle-version 8.7
+          fi
           chmod +x gradlew
 
       - name: Build Android APK
