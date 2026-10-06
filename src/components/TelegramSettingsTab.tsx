@@ -117,7 +117,10 @@ export const TelegramSettingsTab: React.FC<TelegramSettingsTabProps> = ({
       if (res.success) {
         onShowToast('Тестовое сообщение успешно доставлено в Telegram!', 'success');
       } else {
-        onShowToast(`Ошибка отправки: ${res.error}`, 'error');
+        const errHint = res.error?.includes('chat not found')
+          ? 'Bad Request: chat not found (Обязательно откройте бота в Telegram и нажмите /start!)'
+          : res.error;
+        onShowToast(`Ошибка отправки: ${errHint}`, 'error');
       }
     } finally {
       setIsSendingTest(false);
@@ -173,6 +176,16 @@ export const TelegramSettingsTab: React.FC<TelegramSettingsTabProps> = ({
             <p className="text-xs text-slate-400 leading-relaxed">
               Настройте параметры вызова Telegram Bot API для отправки сообщений в нужный чат, группу или канал:
             </p>
+
+            {/* Warning banner about /start */}
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs space-y-1">
+              <div className="font-semibold flex items-center gap-1.5 text-amber-400">
+                <span>⚠️ Важное правило Telegram для ботов:</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-slate-300">
+                Чтобы бот мог отправлять вам сообщения, <b>откройте вашего бота в Telegram и обязательно нажмите кнопку <code className="text-amber-400 font-mono bg-slate-950 px-1 py-0.5 rounded">/start</code></b>. Если отправка в канал или группу — добавьте бота в подписчики/админы. Без этого Telegram заблокирует отправку с ошибкой <i>Bad Request: chat not found</i>.
+              </p>
+            </div>
 
             {/* 1. Endpoint */}
             <div className="space-y-1.5">

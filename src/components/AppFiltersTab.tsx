@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { AppCategory, AppFilterRule, ForwardingSettings } from '../types';
 import { FilterEditModal } from './FilterEditModal';
+import { syncDeviceApps } from '../utils/appScanner';
 
 interface AppFiltersTabProps {
   rules: AppFilterRule[];
@@ -174,6 +175,21 @@ export const AppFiltersTab: React.FC<AppFiltersTabProps> = ({
     onShowToast(`Синхронизировано: добавлено ${countAdded} новых приложений с устройства`, 'success');
   };
 
+  // Scan device apps
+  const handleScanDeviceApps = () => {
+    if (typeof window !== 'undefined' && window.AndroidBridge?.getInstalledApps) {
+      const { updatedRules, addedCount } = syncDeviceApps(rules);
+      onUpdateRules(updatedRules);
+      if (addedCount > 0) {
+        onShowToast(`Найдено и добавлено ${addedCount} новых приложений с устройства`, 'success');
+      } else {
+        onShowToast(`Все приложения с устройства (${updatedRules.length}) уже в списке`, 'success');
+      }
+    } else {
+      setIsImportModalOpen(true);
+    }
+  };
+
   // Add custom manual app
   const handleAddNewApp = () => {
     const newRule: AppFilterRule = {
@@ -222,12 +238,21 @@ export const AppFiltersTab: React.FC<AppFiltersTabProps> = ({
           <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
             <button
               type="button"
+              onClick={handleScanDeviceApps}
+              className="px-3.5 py-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-xs font-semibold text-sky-400 border border-sky-500/30 transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              title="Сканировать все установленные приложения непосредственно с Android-устройства"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-sky-400" />
+              Сканировать устройство
+            </button>
+            <button
+              type="button"
               onClick={() => setIsImportModalOpen(true)}
               className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-              title="Загрузить или вставить список установленных приложений с Android"
+              title="Вставить список пакетов вручную"
             >
-              <Upload className="w-3.5 h-3.5 text-sky-400" />
-              Импорт с устройства
+              <Upload className="w-3.5 h-3.5 text-slate-400" />
+              Импорт списка
             </button>
             <button
               type="button"

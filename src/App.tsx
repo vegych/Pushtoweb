@@ -18,6 +18,7 @@ import {
   loadLogs, 
   saveLogs 
 } from './services/storage';
+import { syncDeviceApps } from './utils/appScanner';
 import { sendTelegramMessage } from './services/telegram';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 
@@ -123,6 +124,17 @@ export default function App() {
 
   // Sync settings and rules with backend or Android Native Bridge on mount
   useEffect(() => {
+    // 1. Scan installed apps from Android device if running inside native APK
+    if (typeof window !== 'undefined' && window.AndroidBridge?.getInstalledApps) {
+      setRules((prevRules) => {
+        const { updatedRules, addedCount } = syncDeviceApps(prevRules);
+        if (addedCount > 0) {
+          saveRules(updatedRules);
+        }
+        return updatedRules;
+      });
+    }
+
     // Check if running inside native Android App
     if (typeof window !== 'undefined' && window.AndroidBridge?.getTelegramConfig) {
       try {
@@ -254,7 +266,10 @@ export default function App() {
       if (res.success) {
         showToast(t.testSent, 'success');
       } else {
-        showToast(`${t.testError}${res.error}`, 'error');
+        const errHint = res.error?.includes('chat not found')
+          ? `${res.error} (Сначала нажмите /start в вашем боте в Telegram!)`
+          : res.error;
+        showToast(`${t.testError}${errHint}`, 'error');
       }
     } finally {
       setIsTesting(false);
