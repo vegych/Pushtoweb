@@ -357,7 +357,23 @@ async function startServer() {
 
       // 1. Root files
       zip.file("settings.gradle.kts", `
-rootProject.name = "SMSForwarder"
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "PushToWeb"
 include(":app")
       `.trim());
 

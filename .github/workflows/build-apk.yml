@@ -67,7 +67,7 @@ jobs:
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleDebug assembleRelease -PversionName="${{ env.APP_VERSION }}" || ./gradlew assembleDebug -PversionName="${{ env.APP_VERSION }}"
+          ./gradlew assembleDebug -PversionName="${{ env.APP_VERSION }}" --stacktrace
 
       - name: Locate and Package APK with SHA256 Checksum
         id: package_apk
