@@ -15,13 +15,25 @@ android {
         versionName = (project.findProperty("versionName") as? String) ?: "1.0.0"
     }
 
+    signingConfigs {
+        create("release") {
+            val keystoreFile = file("release.jks")
+            storeFile = if (keystoreFile.exists()) keystoreFile else file("debug.keystore")
+            storePassword = if (keystoreFile.exists()) "pushtowebpass" else "android"
+            keyAlias = if (keystoreFile.exists()) "pushtoweb" else "androiddebugkey"
+            keyPassword = if (keystoreFile.exists()) "pushtowebpass" else "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         debug {
             isDebuggable = true
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

@@ -90,11 +90,22 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       rules,
     };
 
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const fileName = `pushtoweb_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    const jsonString = JSON.stringify(backupData, null, 2);
+
+    // If running inside native Android App, call native Share/Save file dialog
+    if (typeof window !== 'undefined' && window.AndroidBridge?.saveBackupJson) {
+      window.AndroidBridge.saveBackupJson(jsonString, fileName);
+      onShowToast(t.backupSuccess, 'success');
+      return;
+    }
+
+    // Web browser download fallback
+    const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pushtoweb_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

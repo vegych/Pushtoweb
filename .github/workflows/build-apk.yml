@@ -87,10 +87,23 @@ jobs:
           fi
           chmod +x gradlew
 
+      - name: Generate or Ensure Fixed Release Signing Key
+        run: |
+          mkdir -p android/app
+          if [ ! -f android/app/release.jks ]; then
+            echo "Generating persistent release keystore..."
+            $JAVA_HOME/bin/keytool -genkeypair -v \
+              -keystore android/app/release.jks \
+              -alias pushtoweb \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass pushtowebpass -keypass pushtowebpass \
+              -dname "CN=PushToWeb, OU=App, O=PushToWeb, L=City, ST=State, C=RU"
+          fi
+
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleDebug -PversionName="${{ env.APP_VERSION }}" -PversionCode="${{ github.run_number }}" --stacktrace
+          ./gradlew assembleRelease -PversionName="${{ env.APP_VERSION }}" -PversionCode="${{ github.run_number }}" --stacktrace
 
       - name: Locate and Package APK with SHA256 Checksum
         id: package_apk

@@ -185,4 +185,41 @@ class AndroidBridge(private val activity: Activity) {
             "[]"
         }
     }
+
+    @JavascriptInterface
+    fun saveBackupJson(jsonContent: String, fileName: String) {
+        activity.runOnUiThread {
+            try {
+                val downloadsDir = activity.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS) ?: activity.cacheDir
+                val file = java.io.File(downloadsDir, if (fileName.isEmpty()) "pushtoweb_backup.json" else fileName)
+                file.writeText(jsonContent)
+
+                val uri: Uri = androidx.core.content.FileProvider.getUriForFile(
+                    activity,
+                    "${activity.packageName}.fileprovider",
+                    file
+                )
+
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/json"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, fileName)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+
+                activity.startActivity(Intent.createChooser(intent, "Сохранить бэкап PushToWeb"))
+            } catch (e: Exception) {
+                try {
+                    val sendIntent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        putExtra(Intent.EXTRA_TEXT, jsonContent)
+                        type = "text/plain"
+                    }
+                    activity.startActivity(Intent.createChooser(sendIntent, "Сохранить бэкап"))
+                } catch (ex: Exception) {
+                    Toast.makeText(activity, "Ошибка сохранения бэкапа: ${ex.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 }

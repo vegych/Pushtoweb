@@ -116,6 +116,7 @@ export interface AndroidNativeBridge {
   saveTelegramConfig?: (token: string, chatId: string, endpoint: string, webhook: string) => void;
   getTelegramConfig?: () => string;
   getInstalledApps?: () => string;
+  saveBackupJson?: (jsonContent: string, fileName: string) => void;
 }
 
 declare global {
