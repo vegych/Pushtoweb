@@ -8,6 +8,7 @@ import { TemplateEditorTab } from './components/TemplateEditorTab';
 import { LogsTab } from './components/LogsTab';
 import { AndroidSetupTab } from './components/AndroidSetupTab';
 import { AppFilterRule, ForwardedMessageLog, ForwardingSettings } from './types';
+import { Language, LanguageMode, Theme, ThemeMode, translations, detectSystemLanguage, detectSystemTheme } from './utils/i18n';
 import { 
   loadSettings, 
   saveSettings, 
@@ -20,7 +21,6 @@ import { sendTelegramMessage } from './services/telegram';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 
 export default function App() {
-  // Default opens to 'dashboard' (Главная со статистикой пересылки)
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [settings, setSettings] = useState<ForwardingSettings>(loadSettings);
@@ -28,6 +28,85 @@ export default function App() {
   const [logs, setLogs] = useState<ForwardedMessageLog[]>(loadLogs);
   const [isTesting, setIsTesting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; id: number } | null>(null);
+
+  // Automatic language state with system detection
+  const [langMode, setLangMode] = useState<LanguageMode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pushtoweb_lang_mode') as LanguageMode | null;
+      if (saved === 'auto' || saved === 'ru' || saved === 'en') return saved;
+      const legacy = localStorage.getItem('pushtoweb_lang') as LanguageMode | null;
+      if (legacy === 'ru' || legacy === 'en') return legacy;
+    }
+    return 'auto';
+  });
+
+  const [systemLang, setSystemLang] = useState<Language>(detectSystemLanguage);
+  const lang: Language = langMode === 'auto' ? systemLang : langMode;
+
+  // Listen for system language changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleLangChange = () => {
+      setSystemLang(detectSystemLanguage());
+    };
+    window.addEventListener('languagechange', handleLangChange);
+    return () => window.removeEventListener('languagechange', handleLangChange);
+  }, []);
+
+  // Automatic theme state with system detection
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pushtoweb_theme_mode') as ThemeMode | null;
+      if (saved === 'auto' || saved === 'dark' || saved === 'light') return saved;
+      const legacy = localStorage.getItem('pushtoweb_theme') as ThemeMode | null;
+      if (legacy === 'dark' || legacy === 'light') return legacy;
+    }
+    return 'auto';
+  });
+
+  const [systemTheme, setSystemTheme] = useState<Theme>(detectSystemTheme);
+  const effectiveTheme: Theme = themeMode === 'auto' ? systemTheme : themeMode;
+
+  // Listen for system color scheme changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleThemeChange = (e: MediaQueryListEvent) => {
+      setSystemTheme(e.matches ? 'dark' : 'light');
+    };
+    setSystemTheme(mediaQuery.matches ? 'dark' : 'light');
+    mediaQuery.addEventListener('change', handleThemeChange);
+    return () => mediaQuery.removeEventListener('change', handleThemeChange);
+  }, []);
+
+  // Apply dark mode class to document element
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (effectiveTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+      }
+    }
+  }, [effectiveTheme]);
+
+  // Persist language mode
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('pushtoweb_lang_mode', langMode);
+    }
+  }, [langMode]);
+
+  // Persist theme mode
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('pushtoweb_theme_mode', themeMode);
+    }
+  }, [themeMode]);
+
+  const t = translations[lang];
 
   const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type, id: Date.now() });
@@ -43,14 +122,12 @@ export default function App() {
 
   // Sync settings and rules with backend on mount
   useEffect(() => {
-    // Initial fetch from backend if running fullstack
     fetch('/api/settings')
       .then((res) => res.json())
       .then((backendSettings) => {
         if (backendSettings && backendSettings.telegramBotToken) {
           setSettings((prev) => ({ ...prev, ...backendSettings }));
         } else {
-          // Push local settings to backend
           fetch('/api/settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -66,7 +143,6 @@ export default function App() {
         if (Array.isArray(backendRules) && backendRules.length > 0) {
           setRules(backendRules);
         } else {
-          // Push local rules to backend
           fetch('/api/rules', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -76,7 +152,6 @@ export default function App() {
       })
       .catch(() => {});
 
-    // Initial fetch of logs
     fetch('/api/logs')
       .then((res) => res.json())
       .then((backendLogs) => {
@@ -114,7 +189,7 @@ export default function App() {
     setLogs([]);
     saveLogs([]);
     fetch('/api/logs/clear', { method: 'POST' }).catch(() => {});
-    showToast('Журнал сообщений успешно очищен', 'success');
+    showToast(lang === 'ru' ? 'Журнал сообщений успешно очищен' : 'Forwarding history log cleared', 'success');
   };
 
   const isConfigured = Boolean(settings.telegramBotToken && settings.telegramChatId);
@@ -123,15 +198,15 @@ export default function App() {
   const handleQuickTest = async () => {
     if (!settings.telegramBotToken || !settings.telegramChatId) {
       setActiveTab('telegram');
-      showToast('Укажите токен бота и Chat ID для отправки теста', 'error');
+      showToast(lang === 'ru' ? 'Укажите токен бота и Chat ID для отправки теста' : 'Enter bot token and Chat ID to send test', 'error');
       return;
     }
 
     setIsTesting(true);
     try {
-      const timeStr = new Date().toLocaleTimeString('ru-RU');
-      const opName = settings.sim1OperatorName || 'МТС';
-      const testMsg = `🔔 <b>Проверка связи с SMS Forwarder</b>\n\nБот и пересылка настроены успешно!\n\n🔑 Пример 2FA кода: <code>${Math.floor(1000 + Math.random() * 9000)}</code>\n\n<pre>📶 ${opName}  ·  ⏰ ${timeStr}</pre>`;
+      const timeStr = new Date().toLocaleTimeString(lang === 'ru' ? 'ru-RU' : 'en-US');
+      const opName = settings.sim1OperatorName || (lang === 'ru' ? 'МТС' : 'Carrier');
+      const testMsg = `🔔 <b>PushToWeb · Test Message</b>\n\nTelegram forwarding connection is working properly!\n\n🔑 2FA Code Sample: <code>${Math.floor(1000 + Math.random() * 9000)}</code>\n\n<pre>📶 ${opName}  ·  ⏰ ${timeStr}</pre>`;
 
       const res = await sendTelegramMessage(
         settings.telegramBotToken,
@@ -141,9 +216,9 @@ export default function App() {
         settings.telegramApiEndpoint
       );
       if (res.success) {
-        showToast('Тестовое уведомление доставлено в Telegram!', 'success');
+        showToast(t.testSent, 'success');
       } else {
-        showToast(`Ошибка Telegram: ${res.error}`, 'error');
+        showToast(`${t.testError}${res.error}`, 'error');
       }
     } finally {
       setIsTesting(false);
@@ -151,26 +226,26 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-sky-500/20 selection:text-sky-300">
+    <div className="min-h-screen flex flex-col dark:bg-slate-950 bg-slate-50 dark:text-slate-100 text-slate-900 font-sans selection:bg-sky-500/20 selection:text-sky-400 transition-colors duration-200">
       {/* Toast Notification Container */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-200">
           <div
             className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium ${
               toast.type === 'success'
-                ? 'bg-slate-900 border-emerald-500/50 text-emerald-300 shadow-emerald-950/40'
-                : 'bg-slate-900 border-rose-500/50 text-rose-300 shadow-rose-950/40'
+                ? 'dark:bg-slate-900 bg-white border-emerald-500/50 text-emerald-600 dark:text-emerald-300 shadow-emerald-500/10'
+                : 'dark:bg-slate-900 bg-white border-rose-500/50 text-rose-600 dark:text-rose-300 shadow-rose-500/10'
             }`}
           >
             {toast.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
             ) : (
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
             )}
             <span className="truncate max-w-sm">{toast.message}</span>
             <button
               onClick={() => setToast(null)}
-              className="text-slate-500 hover:text-white transition-colors ml-1 p-0.5 cursor-pointer"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors ml-1 p-0.5 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -190,21 +265,26 @@ export default function App() {
         onQuickTest={handleQuickTest}
         isTesting={isTesting}
         onShowToast={showToast}
+        lang={lang}
+        langMode={langMode}
+        onSetLangMode={setLangMode}
+        theme={effectiveTheme}
+        themeMode={themeMode}
+        onSetThemeMode={setThemeMode}
       />
 
-      {/* Top Header with Hamburger menu button */}
+      {/* Top Header with Hamburger menu button & Status indicator */}
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onOpenMenu={() => setIsMenuOpen(true)}
         isConfigured={isConfigured}
-        onQuickTest={handleQuickTest}
-        isTesting={isTesting}
         settings={settings}
+        lang={lang}
       />
 
       {/* Main Content Body */}
-      <main className="flex-1 pb-16">
+      <main className="flex-1 pb-6">
         {activeTab === 'dashboard' && (
           <DashboardTab
             settings={settings}
@@ -215,6 +295,7 @@ export default function App() {
             onShowToast={showToast}
             onQuickTest={handleQuickTest}
             isTesting={isTesting}
+            lang={lang}
           />
         )}
 
@@ -261,54 +342,6 @@ export default function App() {
           />
         )}
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-6 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-300"><span className="text-sky-400">Push</span>ToWeb</span>
-            <span aria-hidden="true">·</span>
-            <span>SMS & Push шлюз в Telegram</span>
-          </div>
-
-          <div className="flex items-center gap-4 text-slate-400">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className="hover:text-slate-200 transition-colors cursor-pointer"
-            >
-              Статистика
-            </button>
-            <span aria-hidden="true">·</span>
-            <button
-              onClick={() => setActiveTab('filters')}
-              className="hover:text-slate-200 transition-colors cursor-pointer"
-            >
-              Приложения
-            </button>
-            <span aria-hidden="true">·</span>
-            <button
-              onClick={() => setActiveTab('telegram')}
-              className="hover:text-slate-200 transition-colors cursor-pointer"
-            >
-              Telegram
-            </button>
-            <span aria-hidden="true">·</span>
-            <button
-              onClick={() => setActiveTab('templates')}
-              className="hover:text-slate-200 transition-colors cursor-pointer"
-            >
-              Шаблоны сообщений
-            </button>
-            <span aria-hidden="true">·</span>
-            <button
-              onClick={() => setActiveTab('setup')}
-              className="hover:text-slate-200 transition-colors cursor-pointer"
-            >
-              Android
-            </button>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

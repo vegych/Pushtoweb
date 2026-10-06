@@ -8,16 +8,17 @@ import {
   ClipboardList, 
   Smartphone, 
   Send, 
-  CheckCircle2, 
-  AlertTriangle,
   MessageSquareText,
-  Bell,
   Copy,
   Check,
-  Rocket
+  Sun,
+  Moon,
+  Laptop,
+  Sparkles
 } from 'lucide-react';
 import { ActiveTab } from './Header';
 import { ForwardingSettings, AppFilterRule } from '../types';
+import { Language, LanguageMode, Theme, ThemeMode, translations } from '../utils/i18n';
 
 interface SidebarDrawerProps {
   isOpen: boolean;
@@ -30,6 +31,12 @@ interface SidebarDrawerProps {
   onQuickTest: () => void;
   isTesting: boolean;
   onShowToast: (msg: string, type?: 'success' | 'error') => void;
+  lang: Language;
+  langMode: LanguageMode;
+  onSetLangMode: (mode: LanguageMode) => void;
+  theme: Theme;
+  themeMode: ThemeMode;
+  onSetThemeMode: (mode: ThemeMode) => void;
 }
 
 export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
@@ -43,9 +50,16 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
   onQuickTest,
   isTesting,
   onShowToast,
+  lang,
+  langMode,
+  onSetLangMode,
+  theme,
+  themeMode,
+  onSetThemeMode,
 }) => {
+  const t = translations[lang];
   const [copiedUrl, setCopiedUrl] = React.useState(false);
-  const webhookUrl = `${window.location.origin}/api/forward?key=${settings.gatewayApiKey}`;
+  const webhookUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/forward?key=${settings.gatewayApiKey}`;
 
   const enabledAppsCount = rules.filter((r) => r.enabled).length;
   const isBotConfigured = Boolean(settings.telegramBotToken && settings.telegramChatId);
@@ -55,7 +69,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
     navigator.clipboard.writeText(webhookUrl);
     setCopiedUrl(true);
     setTimeout(() => setCopiedUrl(false), 2000);
-    onShowToast('Webhook URL скопирован в буфер', 'success');
+    onShowToast(lang === 'ru' ? 'Webhook URL скопирован в буфер' : 'Webhook URL copied to clipboard', 'success');
   };
 
   const navItems: {
@@ -68,46 +82,46 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
   }[] = [
     {
       id: 'dashboard',
-      label: 'Главная (Статистика)',
-      description: 'Общая сводка, метрики пересылки',
+      label: t.tabDashboard,
+      description: lang === 'ru' ? 'Общая сводка, метрики пересылки' : 'Overview & delivery metrics',
       icon: BarChart3,
     },
     {
       id: 'filters',
-      label: 'Фильтр приложений',
-      description: 'Выбор приложений и правила',
+      label: t.tabFilters,
+      description: lang === 'ru' ? 'Выбор приложений и правила' : 'App selection & anti-spam rules',
       icon: Sliders,
-      badge: `${enabledAppsCount} из ${rules.length}`,
-      badgeColor: 'text-sky-300 bg-sky-950/80 border-sky-800/60',
+      badge: `${enabledAppsCount} / ${rules.length}`,
+      badgeColor: 'dark:text-sky-300 text-sky-700 dark:bg-sky-950/80 bg-sky-100 dark:border-sky-800/60 border-sky-300',
     },
     {
       id: 'telegram',
-      label: 'Телеграм и шлюз',
-      description: 'API чата, токен, Webhook',
+      label: t.tabTelegram,
+      description: lang === 'ru' ? 'API чата, токен, Webhook' : 'Chat API, bot token & webhook',
       icon: Globe,
-      badge: isBotConfigured ? 'Подключен' : 'Не настроен',
+      badge: isBotConfigured ? (lang === 'ru' ? 'Подключен' : 'Connected') : (lang === 'ru' ? 'Не настроен' : 'Not set'),
       badgeColor: isBotConfigured
-        ? 'text-emerald-400 bg-emerald-950/80 border-emerald-800/60'
-        : 'text-amber-400 bg-amber-950/80 border-amber-800/60',
+        ? 'dark:text-emerald-400 text-emerald-700 dark:bg-emerald-950/80 bg-emerald-100 dark:border-emerald-800/60 border-emerald-300'
+        : 'dark:text-amber-400 text-amber-700 dark:bg-amber-950/80 bg-amber-100 dark:border-amber-800/60 border-amber-300',
     },
     {
       id: 'templates',
-      label: 'Шаблоны сообщений',
-      description: 'Формат SMS, пушей и операторов',
+      label: t.tabTemplates,
+      description: lang === 'ru' ? 'Формат SMS, пушей и операторов' : 'SMS, push and carrier styles',
       icon: FileText,
     },
     {
       id: 'logs',
-      label: 'Журнал пересылки',
-      description: 'История всех SMS и пушей',
+      label: t.tabLogs,
+      description: lang === 'ru' ? 'История всех SMS и пушей' : 'History of all forwarded events',
       icon: ClipboardList,
       badge: `${logsCount}`,
-      badgeColor: 'text-slate-300 bg-slate-800 border-slate-700',
+      badgeColor: 'dark:text-slate-300 text-slate-700 dark:bg-slate-800 bg-slate-200 dark:border-slate-700 border-slate-300',
     },
     {
       id: 'setup',
-      label: 'Инструкция Android',
-      description: 'Подключение MacroDroid / Tasker',
+      label: t.tabSetup,
+      description: lang === 'ru' ? 'Подключение MacroDroid / Tasker' : 'MacroDroid, Tasker & APK setup',
       icon: Smartphone,
     },
   ];
@@ -117,34 +131,36 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
       {/* Backdrop overlay */}
       <div
         onClick={onClose}
-        className={`fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm transition-opacity duration-300 ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       />
 
       {/* Drawer Panel */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 z-50 w-80 max-w-[85vw] bg-slate-900 border-r border-slate-800 shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-out ${
+        className={`fixed top-0 left-0 bottom-0 z-50 w-80 max-w-[85vw] dark:bg-slate-900 bg-white border-r dark:border-slate-800 border-slate-200 shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Drawer Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b dark:border-slate-800 border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+            <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500">
               <MessageSquareText className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="font-bold text-white text-sm tracking-tight">
-                <span className="text-sky-400">Push</span>ToWeb
+              <h2 className="font-bold dark:text-white text-slate-900 text-sm tracking-tight">
+                <span className="text-sky-500">Push</span>ToWeb
               </h2>
-              <div className="text-[11px] text-slate-400">Панель управления</div>
+              <div className="text-[11px] dark:text-slate-400 text-slate-500">
+                {lang === 'ru' ? 'Панель управления' : 'Control Panel'}
+              </div>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg dark:text-slate-400 text-slate-500 hover:dark:text-white hover:text-slate-900 dark:hover:bg-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
             title="Закрыть меню"
           >
             <X className="w-5 h-5" />
@@ -152,9 +168,9 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
         </div>
 
         {/* Navigation List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-1.5 text-xs">
-          <div className="px-3 py-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-            Разделы приложения
+        <div className="flex-1 overflow-y-auto p-3 space-y-1 text-xs">
+          <div className="px-3 py-1 text-[11px] font-semibold dark:text-slate-500 text-slate-400 uppercase tracking-wider">
+            {t.sections}
           </div>
 
           {navItems.map((item) => {
@@ -168,15 +184,15 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                   onSelectTab(item.id);
                   onClose();
                 }}
-                className={`w-full p-3 rounded-xl text-left transition-all flex items-start gap-3 cursor-pointer ${
+                className={`w-full p-2.5 sm:p-3 rounded-xl text-left transition-all duration-150 flex items-start gap-3 cursor-pointer ${
                   isActive
-                    ? 'bg-sky-600/15 text-sky-300 border border-sky-500/40 shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60 border border-transparent'
+                    ? 'dark:bg-sky-600/15 bg-sky-50 dark:text-sky-300 text-sky-700 border dark:border-sky-500/40 border-sky-300 shadow-sm'
+                    : 'dark:text-slate-300 text-slate-700 hover:dark:text-white hover:text-slate-900 hover:dark:bg-slate-800/60 hover:bg-slate-100 border border-transparent'
                 }`}
               >
                 <Icon
                   className={`w-4 h-4 mt-0.5 shrink-0 ${
-                    isActive ? 'text-sky-400' : 'text-slate-400'
+                    isActive ? 'text-sky-500' : 'dark:text-slate-400 text-slate-500'
                   }`}
                 />
                 <div className="flex-1 min-w-0">
@@ -185,14 +201,14 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                     {item.badge && (
                       <span
                         className={`text-[10px] font-mono px-1.5 py-0.2 rounded border shrink-0 ${
-                          item.badgeColor || 'text-slate-400 bg-slate-800'
+                          item.badgeColor || 'dark:text-slate-400 text-slate-600 dark:bg-slate-800 bg-slate-100'
                         }`}
                       >
                         {item.badge}
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                  <p className="text-[11px] dark:text-slate-500 text-slate-400 truncate mt-0.5">
                     {item.description}
                   </p>
                 </div>
@@ -201,34 +217,141 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
           })}
         </div>
 
-        {/* Drawer Footer: Status & Quick test */}
-        <div className="p-4 border-t border-slate-800 space-y-3 bg-slate-950/40 text-xs">
+        {/* Drawer Footer: Theme, Language, Status & Test */}
+        <div className="p-4 border-t dark:border-slate-800 border-slate-200 space-y-3 dark:bg-slate-950/40 bg-slate-50 text-xs">
+          {/* Theme & Language Selectors */}
+          <div className="space-y-2.5">
+            {/* Theme Selector */}
+            <div>
+              <div className="flex items-center justify-between text-[11px] mb-1 font-medium dark:text-slate-400 text-slate-500">
+                <span>{t.themeSetting}</span>
+                {themeMode === 'auto' && (
+                  <span className="text-[10px] dark:text-slate-500 text-slate-400">
+                    ({theme === 'dark' ? t.themeDark : t.themeLight})
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-1 p-1 rounded-xl dark:bg-slate-900 bg-slate-200/70 border dark:border-slate-800 border-slate-300">
+                <button
+                  type="button"
+                  onClick={() => onSetThemeMode('auto')}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                    themeMode === 'auto'
+                      ? 'dark:bg-slate-800 bg-white dark:text-sky-400 text-sky-600 shadow-sm border dark:border-slate-700 border-slate-300 font-semibold'
+                      : 'dark:text-slate-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
+                  }`}
+                  title={`${t.themeSetting}: ${t.themeAuto}`}
+                >
+                  <Laptop className="w-3 h-3" />
+                  <span>{t.themeAuto}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSetThemeMode('light')}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                    themeMode === 'light'
+                      ? 'dark:bg-slate-800 bg-white dark:text-amber-500 text-amber-600 shadow-sm border dark:border-slate-700 border-slate-300 font-semibold'
+                      : 'dark:text-slate-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
+                  }`}
+                  title={`${t.themeSetting}: ${t.themeLight}`}
+                >
+                  <Sun className="w-3 h-3 text-amber-500" />
+                  <span>{t.themeLight}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSetThemeMode('dark')}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                    themeMode === 'dark'
+                      ? 'dark:bg-slate-800 bg-white dark:text-sky-400 text-sky-600 shadow-sm border dark:border-slate-700 border-slate-300 font-semibold'
+                      : 'dark:text-slate-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
+                  }`}
+                  title={`${t.themeSetting}: ${t.themeDark}`}
+                >
+                  <Moon className="w-3 h-3 text-sky-400" />
+                  <span>{t.themeDark}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Language Selector */}
+            <div>
+              <div className="flex items-center justify-between text-[11px] mb-1 font-medium dark:text-slate-400 text-slate-500">
+                <span>{t.langSetting}</span>
+                {langMode === 'auto' && (
+                  <span className="text-[10px] dark:text-slate-500 text-slate-400">
+                    ({lang.toUpperCase()})
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-1 p-1 rounded-xl dark:bg-slate-900 bg-slate-200/70 border dark:border-slate-800 border-slate-300">
+                <button
+                  type="button"
+                  onClick={() => onSetLangMode('auto')}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                    langMode === 'auto'
+                      ? 'dark:bg-slate-800 bg-white dark:text-sky-400 text-sky-600 shadow-sm border dark:border-slate-700 border-slate-300 font-semibold'
+                      : 'dark:text-slate-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
+                  }`}
+                  title={`${t.langSetting}: ${t.langAuto}`}
+                >
+                  <Sparkles className="w-3 h-3 text-sky-400" />
+                  <span>{t.langAuto}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSetLangMode('ru')}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                    langMode === 'ru'
+                      ? 'dark:bg-slate-800 bg-white dark:text-sky-400 text-sky-600 shadow-sm border dark:border-slate-700 border-slate-300 font-semibold'
+                      : 'dark:text-slate-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
+                  }`}
+                  title="Русский язык"
+                >
+                  <span>RU</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSetLangMode('en')}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                    langMode === 'en'
+                      ? 'dark:bg-slate-800 bg-white dark:text-sky-400 text-sky-600 shadow-sm border dark:border-slate-700 border-slate-300 font-semibold'
+                      : 'dark:text-slate-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
+                  }`}
+                  title="English"
+                >
+                  <span>EN</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Quick status summary */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] text-slate-400">
-              <span>Статус пересылки:</span>
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between text-[11px] dark:text-slate-400 text-slate-500">
+              <span>{t.forwardingStatus}</span>
               <div className="flex items-center gap-2">
-                <span className={settings.forwardSmsEnabled ? 'text-sky-400' : 'text-slate-600'}>
+                <span className={settings.forwardSmsEnabled ? 'text-sky-500 font-semibold' : 'text-slate-400'}>
                   SMS {settings.forwardSmsEnabled ? '✓' : '✗'}
                 </span>
-                <span className={settings.forwardPushEnabled ? 'text-emerald-400' : 'text-slate-600'}>
+                <span className={settings.forwardPushEnabled ? 'text-emerald-500 font-semibold' : 'text-slate-400'}>
                   Push {settings.forwardPushEnabled ? '✓' : '✗'}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-[11px] text-slate-400">
-              <span className="truncate max-w-[170px] font-mono text-slate-500">
+            <div className="flex items-center justify-between text-[11px] dark:text-slate-400 text-slate-500">
+              <span className="truncate max-w-[170px] font-mono text-[10px]">
                 {webhookUrl.split('/api/')[0]}
               </span>
               <button
                 type="button"
                 onClick={handleCopy}
-                className="text-sky-400 hover:text-sky-300 flex items-center gap-1 cursor-pointer"
-                title="Скопировать URL"
+                className="text-sky-500 hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                title={t.copyUrl}
               >
-                {copiedUrl ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedUrl ? 'Скопировано' : 'Копировать'}</span>
+                {copiedUrl ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                <span>{copiedUrl ? t.copied : t.copyUrl}</span>
               </button>
             </div>
           </div>
@@ -239,15 +362,11 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               onClose();
             }}
             disabled={isTesting}
-            className="w-full py-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-sky-600/20"
+            className="w-full py-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-sky-600/20 active:scale-95"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>{isTesting ? 'Отправка...' : 'Тест в Telegram'}</span>
+            <span>{isTesting ? t.testing : t.quickTest}</span>
           </button>
-
-          <div className="text-[10px] text-center text-slate-600 font-mono pt-1">
-            v1.0.0 Stable
-          </div>
         </div>
       </aside>
     </>
