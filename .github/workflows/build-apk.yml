@@ -36,7 +36,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Determine Version Name
+      - name: Determine Version and Release Tag
         id: get_version
         run: |
           if [[ -n "${{ github.event.inputs.version }}" ]]; then
@@ -44,11 +44,22 @@ jobs:
           elif [[ "${{ github.ref }}" =~ ^refs/tags/v ]]; then
             VER="${GITHUB_REF_NAME#v}"
           else
-            VER="1.0.0"
+            BASE_VER="1.0"
+            if grep -q 'versionName' android/app/build.gradle.kts; then
+              EXTRACTED=$(grep 'versionName' android/app/build.gradle.kts | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+              if [[ "$EXTRACTED" =~ ^([0-9]+\.[0-9]+) ]]; then
+                BASE_VER="${BASH_REMATCH[1]}"
+              fi
+            fi
+            VER="${BASE_VER}.${{ github.run_number }}"
           fi
+
+          TAG="v$VER"
           echo "APP_VERSION=$VER" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG" >> $GITHUB_ENV
           echo "version=$VER" >> $GITHUB_OUTPUT
-          echo "Resolved version: $VER"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Determined release: $TAG (version: $VER, run: ${{ github.run_number }})"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -67,7 +78,7 @@ jobs:
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleDebug -PversionName="${{ env.APP_VERSION }}" --stacktrace
+          ./gradlew assembleDebug -PversionName="${{ env.APP_VERSION }}" -PversionCode="${{ github.run_number }}" --stacktrace
 
       - name: Locate and Package APK with SHA256 Checksum
         id: package_apk
@@ -97,14 +108,23 @@ jobs:
           retention-days: 90
 
       - name: Publish to GitHub Releases
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           name: PushToWeb v${{ env.APP_VERSION }}
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ env.TAG_NAME }}
           files: |
             build_output/PushToWeb-${{ env.APP_VERSION }}.apk
             build_output/PushToWeb-${{ env.APP_VERSION }}.apk.sha256
+          body: |
+            ## 🚀 Релиз PushToWeb v${{ env.APP_VERSION }}
+
+            Автономный шлюз и центр управления пересылкой SMS и push-уведомлений приложений в Telegram.
+
+            ### 📦 Загрузка
+            - **Android APK**: `PushToWeb-${{ env.APP_VERSION }}.apk`
+            - **Контрольная сумма**: см. `PushToWeb-${{ env.APP_VERSION }}.apk.sha256`
+
+            ### 📋 Изменения
           generate_release_notes: true
           draft: false
           prerelease: false
