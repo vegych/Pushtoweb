@@ -163,9 +163,10 @@ class AndroidBridge(private val activity: Activity) {
 
                 val isSystem = (app.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
                 val launchIntent = pm.getLaunchIntentForPackage(pkgName)
+                val isSmsApp = pkgName.contains("mms") || pkgName.contains("telephony") || pkgName.contains("messaging")
 
-                // Include all user applications or system apps with a launcher/UI
-                if (!isSystem || launchIntent != null || pkgName.contains("mms") || pkgName.contains("telephony") || pkgName.contains("message") || pkgName.contains("mail") || pkgName.contains("bank") || pkgName.contains("pay")) {
+                // Only include apps that have a launch intent (UI/notifications) or SMS apps
+                if (launchIntent != null || isSmsApp) {
                     val label = try {
                         pm.getApplicationLabel(app).toString()
                     } catch (e: Exception) {

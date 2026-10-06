@@ -67,9 +67,12 @@ export function categorizeApp(packageName: string, appName: string): { category:
   return { category: 'custom', extractOtp: false };
 }
 
-export function syncDeviceApps(existingRules: AppFilterRule[]): { updatedRules: AppFilterRule[]; addedCount: number } {
+export function syncDeviceApps(
+  existingRules: AppFilterRule[],
+  purgeUninstalled: boolean = true
+): { updatedRules: AppFilterRule[]; addedCount: number; purgedCount: number } {
   if (typeof window === 'undefined' || !window.AndroidBridge?.getInstalledApps) {
-    return { updatedRules: existingRules, addedCount: 0 };
+    return { updatedRules: existingRules, addedCount: 0, purgedCount: 0 };
   }
 
   try {
@@ -77,12 +80,27 @@ export function syncDeviceApps(existingRules: AppFilterRule[]): { updatedRules: 
     const rawApps: { packageName: string; appName: string; isSystem: boolean }[] = JSON.parse(jsonStr || '[]');
 
     if (!Array.isArray(rawApps) || rawApps.length === 0) {
-      return { updatedRules: existingRules, addedCount: 0 };
+      return { updatedRules: existingRules, addedCount: 0, purgedCount: 0 };
     }
 
-    const existingMap = new Map(existingRules.map((r) => [r.packageName, r]));
+    const devicePackageSet = new Set(rawApps.map((a) => a.packageName));
+
+    // Remove predefined apps that are NOT installed on this device (except system SMS and manual custom apps)
+    let purgedCount = 0;
+    let filteredRules = existingRules;
+
+    if (purgeUninstalled) {
+      filteredRules = existingRules.filter((r) => {
+        if (r.category === 'sms' || r.isCustom) return true;
+        const isInstalled = devicePackageSet.has(r.packageName);
+        if (!isInstalled) purgedCount++;
+        return isInstalled;
+      });
+    }
+
+    const existingMap = new Map(filteredRules.map((r) => [r.packageName, r]));
     let addedCount = 0;
-    const newRulesList = [...existingRules];
+    const newRulesList = [...filteredRules];
 
     for (const app of rawApps) {
       if (!app.packageName) continue;
@@ -108,15 +126,13 @@ export function syncDeviceApps(existingRules: AppFilterRule[]): { updatedRules: 
         addedCount++;
       } else {
         const existing = existingMap.get(app.packageName)!;
-        if (!existing.installedOnDevice) {
-          existing.installedOnDevice = true;
-        }
+        existing.installedOnDevice = true;
       }
     }
 
-    return { updatedRules: newRulesList, addedCount };
+    return { updatedRules: newRulesList, addedCount, purgedCount };
   } catch (e) {
     console.error('Failed to sync device apps', e);
-    return { updatedRules: existingRules, addedCount: 0 };
+    return { updatedRules: existingRules, addedCount: 0, purgedCount: 0 };
   }
 }

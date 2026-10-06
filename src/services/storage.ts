@@ -34,24 +34,48 @@ export function saveSettings(settings: ForwardingSettings): void {
   }
 }
 
+const DEFAULT_INITIAL_RULES: AppFilterRule[] = [
+  {
+    id: 'sms_google',
+    name: 'Google Сообщения (SMS)',
+    packageName: 'com.google.android.apps.messaging',
+    category: 'sms',
+    enabled: true,
+    filterMode: 'all',
+    keywords: [],
+    excludeKeywords: ['займы', 'микрозайм', 'казино'],
+    extractOtp: true,
+    silent: false,
+    installedOnDevice: true,
+  },
+  {
+    id: 'sms_default',
+    name: 'Стандартные SMS (MMS)',
+    packageName: 'com.android.mms',
+    category: 'sms',
+    enabled: true,
+    filterMode: 'all',
+    keywords: [],
+    excludeKeywords: ['займы', 'казино'],
+    extractOtp: true,
+    silent: false,
+    installedOnDevice: true,
+  },
+];
+
 export function loadRules(): AppFilterRule[] {
   try {
     const raw = localStorage.getItem(RULES_KEY);
     if (raw) {
       const saved: AppFilterRule[] = JSON.parse(raw);
-      // Merge with predefined apps so newly added default apps are present
-      const savedMap = new Map(saved.map((r) => [r.id, r]));
-      const merged = PREDEFINED_APPS.map((pre) => {
-        return savedMap.has(pre.id) ? { ...pre, ...savedMap.get(pre.id) } : pre;
-      });
-      // Add custom rules created by user
-      const customRules = saved.filter((r) => r.isCustom && !merged.some((m) => m.id === r.id));
-      return [...merged, ...customRules];
+      if (Array.isArray(saved) && saved.length > 0) {
+        return saved;
+      }
     }
   } catch (e) {
     console.error('Failed to load rules from localStorage', e);
   }
-  return [...PREDEFINED_APPS];
+  return DEFAULT_INITIAL_RULES;
 }
 
 export function saveRules(rules: AppFilterRule[]): void {

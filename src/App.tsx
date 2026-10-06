@@ -127,10 +127,8 @@ export default function App() {
     // 1. Scan installed apps from Android device if running inside native APK
     if (typeof window !== 'undefined' && window.AndroidBridge?.getInstalledApps) {
       setRules((prevRules) => {
-        const { updatedRules, addedCount } = syncDeviceApps(prevRules);
-        if (addedCount > 0) {
-          saveRules(updatedRules);
-        }
+        const { updatedRules } = syncDeviceApps(prevRules, true);
+        saveRules(updatedRules);
         return updatedRules;
       });
     }

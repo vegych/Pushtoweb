@@ -178,13 +178,12 @@ export const AppFiltersTab: React.FC<AppFiltersTabProps> = ({
   // Scan device apps
   const handleScanDeviceApps = () => {
     if (typeof window !== 'undefined' && window.AndroidBridge?.getInstalledApps) {
-      const { updatedRules, addedCount } = syncDeviceApps(rules);
+      const { updatedRules, addedCount, purgedCount } = syncDeviceApps(rules, true);
       onUpdateRules(updatedRules);
-      if (addedCount > 0) {
-        onShowToast(`Найдено и добавлено ${addedCount} новых приложений с устройства`, 'success');
-      } else {
-        onShowToast(`Все приложения с устройства (${updatedRules.length}) уже в списке`, 'success');
-      }
+      let msg = `Просканировано ${updatedRules.length} приложений устройства.`;
+      if (addedCount > 0) msg += ` Добавлено новых: +${addedCount}.`;
+      if (purgedCount > 0) msg += ` Очищены отсутствующие: -${purgedCount}.`;
+      onShowToast(msg, 'success');
     } else {
       setIsImportModalOpen(true);
     }
