@@ -51,7 +51,12 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
     const nextVal = !isServiceRunning;
     onUpdateSettings({ ...settings, serviceRunning: nextVal });
     if (window.AndroidBridge?.updateServiceStatus) {
-      window.AndroidBridge.updateServiceStatus(nextVal, settings.forwardSmsEnabled, settings.forwardPushEnabled, true);
+      window.AndroidBridge.updateServiceStatus(
+        nextVal,
+        settings.forwardSmsEnabled,
+        settings.forwardPushEnabled,
+        settings.showNotificationWhenStopped ?? false
+      );
     } else if (window.AndroidBridge?.toggleService) {
       window.AndroidBridge.toggleService(nextVal);
     }
@@ -63,7 +68,12 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
     const nextVal = !settings.forwardSmsEnabled;
     onUpdateSettings({ ...settings, forwardSmsEnabled: nextVal });
     if (window.AndroidBridge?.updateServiceStatus) {
-      window.AndroidBridge.updateServiceStatus(isServiceRunning, nextVal, settings.forwardPushEnabled, true);
+      window.AndroidBridge.updateServiceStatus(
+        isServiceRunning,
+        nextVal,
+        settings.forwardPushEnabled,
+        settings.showNotificationWhenStopped ?? false
+      );
     } else if (window.AndroidBridge?.toggleSms) {
       window.AndroidBridge.toggleSms(nextVal);
     }
@@ -74,9 +84,28 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
     const nextVal = !settings.forwardPushEnabled;
     onUpdateSettings({ ...settings, forwardPushEnabled: nextVal });
     if (window.AndroidBridge?.updateServiceStatus) {
-      window.AndroidBridge.updateServiceStatus(isServiceRunning, settings.forwardSmsEnabled, nextVal, true);
+      window.AndroidBridge.updateServiceStatus(
+        isServiceRunning,
+        settings.forwardSmsEnabled,
+        nextVal,
+        settings.showNotificationWhenStopped ?? false
+      );
     } else if (window.AndroidBridge?.togglePush) {
       window.AndroidBridge.togglePush(nextVal);
+    }
+  };
+
+  const handleToggleShowNotifWhenStopped = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextVal = !settings.showNotificationWhenStopped;
+    onUpdateSettings({ ...settings, showNotificationWhenStopped: nextVal });
+    if (window.AndroidBridge?.updateServiceStatus) {
+      window.AndroidBridge.updateServiceStatus(
+        isServiceRunning,
+        settings.forwardSmsEnabled,
+        settings.forwardPushEnabled,
+        nextVal
+      );
     }
   };
 

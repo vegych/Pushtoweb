@@ -11,14 +11,11 @@ import {
   MessageSquareText,
   Copy,
   Check,
-  Sun,
-  Moon,
-  Laptop,
-  Sparkles
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { ActiveTab } from './Header';
 import { ForwardingSettings, AppFilterRule } from '../types';
-import { Language, LanguageMode, Theme, ThemeMode, translations } from '../utils/i18n';
+import { Language, translations } from '../utils/i18n';
 
 interface SidebarDrawerProps {
   isOpen: boolean;
@@ -32,11 +29,6 @@ interface SidebarDrawerProps {
   isTesting: boolean;
   onShowToast: (msg: string, type?: 'success' | 'error') => void;
   lang: Language;
-  langMode: LanguageMode;
-  onSetLangMode: (mode: LanguageMode) => void;
-  theme: Theme;
-  themeMode: ThemeMode;
-  onSetThemeMode: (mode: ThemeMode) => void;
 }
 
 export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
@@ -51,11 +43,6 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
   isTesting,
   onShowToast,
   lang,
-  langMode,
-  onSetLangMode,
-  theme,
-  themeMode,
-  onSetThemeMode,
 }) => {
   const t = translations[lang];
   const [copiedUrl, setCopiedUrl] = React.useState(false);
@@ -123,6 +110,12 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
       label: t.tabSetup,
       description: lang === 'ru' ? 'Подключение MacroDroid / Tasker' : 'MacroDroid, Tasker & APK setup',
       icon: Smartphone,
+    },
+    {
+      id: 'settings',
+      label: t.tabSettings,
+      description: lang === 'ru' ? 'Тема, язык, работа при выключении, бекап' : 'Theme, language, background & backup',
+      icon: SettingsIcon,
     },
   ];
 
@@ -217,115 +210,8 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
           })}
         </div>
 
-        {/* Drawer Footer: Theme, Language, Status & Test */}
+        {/* Drawer Footer: Status & Test */}
         <div className="p-4 border-t dark:border-slate-800 border-slate-200 space-y-3 dark:bg-slate-950/40 bg-slate-50 text-xs">
-          {/* Theme & Language Selectors */}
-          <div className="space-y-2.5">
-            {/* Theme Selector */}
-            <div>
-              <div className="flex items-center justify-between text-[11px] mb-1 font-medium dark:text-slate-400 text-slate-500">
-                <span>{t.themeSetting}</span>
-                {themeMode === 'auto' && (
-                  <span className="text-[10px] dark:text-slate-500 text-slate-400">
-                    ({theme === 'dark' ? t.themeDark : t.themeLight})
-                  </span>
-                )}
-              </div>
-              <div className="grid grid-cols-3 gap-1 p-1 rounded-xl dark:bg-slate-900 bg-slate-200/70 border dark:border-slate-800 border-slate-300">
-                <button
-                  type="button"
-                  onClick={() => onSetThemeMode('auto')}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                    themeMode === 'auto'
-                      ? 'dark:bg-slate-800 bg-white dark:text-sky-400 text-sky-600 shadow-sm border dark:border-slate-700 border-slate-300 font-semibold'
-                      : 'dark:text-slate-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
-                  }`}
-                  title={`${t.themeSetting}: ${t.themeAuto}`}
-                >
-                  <Laptop className="w-3 h-3" />
-                  <span>{t.themeAuto}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSetThemeMode('light')}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                    themeMode === 'light'
-                      ? 'dark:bg-slate-800 bg-white dark:text-amber-500 text-amber-600 shadow-sm border dark:border-slate-700 border-slate-300 font-semibold'
-                      : 'dark:text-slate-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
-                  }`}
-                  title={`${t.themeSetting}: ${t.themeLight}`}
-                >
-                  <Sun className="w-3 h-3 text-amber-500" />
-                  <span>{t.themeLight}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSetThemeMode('dark')}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                    themeMode === 'dark'
-                      ? 'dark:bg-slate-800 bg-white dark:text-sky-400 text-sky-600 shadow-sm border dark:border-slate-700 border-slate-300 font-semibold'
-                      : 'dark:text-slate-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
-                  }`}
-                  title={`${t.themeSetting}: ${t.themeDark}`}
-                >
-                  <Moon className="w-3 h-3 text-sky-400" />
-                  <span>{t.themeDark}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Language Selector */}
-            <div>
-              <div className="flex items-center justify-between text-[11px] mb-1 font-medium dark:text-slate-400 text-slate-500">
-                <span>{t.langSetting}</span>
-                {langMode === 'auto' && (
-                  <span className="text-[10px] dark:text-slate-500 text-slate-400">
-                    ({lang.toUpperCase()})
-                  </span>
-                )}
-              </div>
-              <div className="grid grid-cols-3 gap-1 p-1 rounded-xl dark:bg-slate-900 bg-slate-200/70 border dark:border-slate-800 border-slate-300">
-                <button
-                  type="button"
-                  onClick={() => onSetLangMode('auto')}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                    langMode === 'auto'
-                      ? 'dark:bg-slate-800 bg-white dark:text-sky-400 text-sky-600 shadow-sm border dark:border-slate-700 border-slate-300 font-semibold'
-                      : 'dark:text-slate-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
-                  }`}
-                  title={`${t.langSetting}: ${t.langAuto}`}
-                >
-                  <Sparkles className="w-3 h-3 text-sky-400" />
-                  <span>{t.langAuto}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSetLangMode('ru')}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                    langMode === 'ru'
-                      ? 'dark:bg-slate-800 bg-white dark:text-sky-400 text-sky-600 shadow-sm border dark:border-slate-700 border-slate-300 font-semibold'
-                      : 'dark:text-slate-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
-                  }`}
-                  title="Русский язык"
-                >
-                  <span>RU</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSetLangMode('en')}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                    langMode === 'en'
-                      ? 'dark:bg-slate-800 bg-white dark:text-sky-400 text-sky-600 shadow-sm border dark:border-slate-700 border-slate-300 font-semibold'
-                      : 'dark:text-slate-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
-                  }`}
-                  title="English"
-                >
-                  <span>EN</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* Quick status summary */}
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between text-[11px] dark:text-slate-400 text-slate-500">

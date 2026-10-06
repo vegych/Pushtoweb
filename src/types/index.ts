@@ -52,6 +52,7 @@ export interface ForwardingSettings {
   pushTemplate: string; // Шаблон для Push-уведомлений
   otpHighlightTemplate: string; // Формат выделения 2FA кода
   showStatusBarNotification: boolean; // Уведомление в строке состояния о работе сервиса (SMS / Push)
+  showNotificationWhenStopped: boolean; // Показывать ли уведомление в строке состояния при остановленном сервисе
 }
 
 export interface IncomingMessagePayload {

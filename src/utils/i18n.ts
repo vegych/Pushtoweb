@@ -37,6 +37,7 @@ export const translations = {
     tabTemplates: 'Шаблоны сообщений',
     tabLogs: 'Журнал пересылки',
     tabSetup: 'Инструкция Android',
+    tabSettings: 'Настройки',
 
     // Dashboard
     forwardingService: 'Сервис пересылки',
@@ -123,7 +124,29 @@ export const translations = {
     langSetting: 'Язык приложения',
     langAuto: 'Авто',
     langRu: 'Русский',
-    langEn: 'English'
+    langEn: 'English',
+    showNotifWhenStopped: 'Уведомление при остановке',
+    showNotifWhenStoppedSubtext: 'Оставлять значок «на паузе» в строке состояния Android, когда сервис выключен',
+    showNotifWhenStoppedOn: 'Показывать значок паузы',
+    showNotifWhenStoppedOff: 'Скрывать при остановке',
+    settingsTitle: 'Настройки приложения',
+    settingsDesc: 'Параметры фоновой работы Android, темы, языка и резервное копирование',
+    backgroundSection: 'Фоновая работа и уведомления',
+    showStatusBarNotif: 'Уведомление при работе сервиса',
+    showStatusBarNotifSubtext: 'Показывать постоянный значок активности сервиса пересылки в строке состояния Android',
+    appearanceSection: 'Внешний вид и язык',
+    backupSection: 'Резервное копирование и сброс',
+    exportBackup: 'Экспорт настроек (JSON)',
+    exportBackupSubtext: 'Скачать резервную копию всех настроек и правил фильтрации',
+    importBackup: 'Импорт настроек',
+    importBackupSubtext: 'Восстановить настройки и правила из файла JSON',
+    resetSettings: 'Сбросить все настройки',
+    resetSettingsSubtext: 'Вернуть параметры и правила к исходным значениям по умолчанию',
+    resetConfirm: 'Вы уверены, что хотите сбросить все настройки и правила?',
+    backupSuccess: 'Резервная копия скачана',
+    importSuccess: 'Настройки и правила успешно восстановлены',
+    importError: 'Ошибка при чтении файла резервной копии',
+    resetSuccess: 'Настройки сброшены к значениям по умолчанию'
   },
   en: {
     // Header & Brand
@@ -144,6 +167,7 @@ export const translations = {
     tabTemplates: 'Message Templates',
     tabLogs: 'Forwarding Logs',
     tabSetup: 'Android Setup',
+    tabSettings: 'Settings',
 
     // Dashboard
     forwardingService: 'Forwarding Service',
@@ -230,6 +254,28 @@ export const translations = {
     langSetting: 'Language',
     langAuto: 'Auto',
     langRu: 'Русский',
-    langEn: 'English'
+    langEn: 'English',
+    showNotifWhenStopped: 'Notification when stopped',
+    showNotifWhenStoppedSubtext: 'Keep "paused" icon in status bar when service is stopped',
+    showNotifWhenStoppedOn: 'Show paused icon',
+    showNotifWhenStoppedOff: 'Hide when stopped',
+    settingsTitle: 'Application Settings',
+    settingsDesc: 'Manage Android background operation, theme, language, and backup/restore',
+    backgroundSection: 'Background Operation & Notifications',
+    showStatusBarNotif: 'Notification while service is running',
+    showStatusBarNotifSubtext: 'Display persistent service icon in status bar while active',
+    appearanceSection: 'Appearance & Language',
+    backupSection: 'Backup & Reset',
+    exportBackup: 'Export Settings (JSON)',
+    exportBackupSubtext: 'Download a backup file containing all settings and app filter rules',
+    importBackup: 'Import Settings',
+    importBackupSubtext: 'Restore settings and rules from a JSON file',
+    resetSettings: 'Reset All Settings',
+    resetSettingsSubtext: 'Restore settings and rules to default factory values',
+    resetConfirm: 'Are you sure you want to reset all settings and rules to default?',
+    backupSuccess: 'Backup downloaded',
+    importSuccess: 'Settings and rules restored successfully',
+    importError: 'Error reading backup file',
+    resetSuccess: 'Settings reset to default values'
   }
 };

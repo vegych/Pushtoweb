@@ -548,4 +548,5 @@ export const DEFAULT_SETTINGS = {
   pushTemplate: '📲 <b>[{app_name}]</b> {sender_info}\n{text}\n\n{otp_block}{meta_footer}',
   otpHighlightTemplate: '🔑 Код: <code>{otp_code}</code>',
   showStatusBarNotification: true,
+  showNotificationWhenStopped: false,
 };

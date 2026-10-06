@@ -7,6 +7,7 @@ import { TelegramSettingsTab } from './components/TelegramSettingsTab';
 import { TemplateEditorTab } from './components/TemplateEditorTab';
 import { LogsTab } from './components/LogsTab';
 import { AndroidSetupTab } from './components/AndroidSetupTab';
+import { SettingsTab } from './components/SettingsTab';
 import { AppFilterRule, ForwardedMessageLog, ForwardingSettings } from './types';
 import { Language, LanguageMode, Theme, ThemeMode, translations, detectSystemLanguage, detectSystemTheme } from './utils/i18n';
 import { 
@@ -301,11 +302,6 @@ export default function App() {
         isTesting={isTesting}
         onShowToast={showToast}
         lang={lang}
-        langMode={langMode}
-        onSetLangMode={setLangMode}
-        theme={effectiveTheme}
-        themeMode={themeMode}
-        onSetThemeMode={setThemeMode}
       />
 
       {/* Top Header with Hamburger menu button & Status indicator */}
@@ -374,6 +370,22 @@ export default function App() {
           <AndroidSetupTab
             settings={settings}
             onShowToast={showToast}
+          />
+        )}
+
+        {activeTab === 'settings' && (
+          <SettingsTab
+            settings={settings}
+            rules={rules}
+            onUpdateSettings={handleUpdateSettings}
+            onUpdateRules={handleUpdateRules}
+            onShowToast={showToast}
+            lang={lang}
+            langMode={langMode}
+            onSetLangMode={setLangMode}
+            theme={effectiveTheme}
+            themeMode={themeMode}
+            onSetThemeMode={setThemeMode}
           />
         )}
       </main>

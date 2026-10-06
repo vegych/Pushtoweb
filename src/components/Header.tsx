@@ -3,7 +3,7 @@ import { Menu, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { ForwardingSettings } from '../types';
 import { Language, translations } from '../utils/i18n';
 
-export type ActiveTab = 'dashboard' | 'filters' | 'telegram' | 'templates' | 'logs' | 'setup';
+export type ActiveTab = 'dashboard' | 'filters' | 'telegram' | 'templates' | 'logs' | 'setup' | 'settings';
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -31,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
     templates: t.tabTemplates,
     logs: t.tabLogs,
     setup: t.tabSetup,
+    settings: t.tabSettings,
   };
 
   return (
