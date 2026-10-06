@@ -8,6 +8,7 @@ import android.telephony.TelephonyManager
 
 class SmsBroadcastReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
+        context?.let { TelegramSender.ensureConfigLoaded(it) }
         if (intent?.action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
             val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
             val tm = context?.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager

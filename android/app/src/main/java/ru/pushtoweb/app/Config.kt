@@ -1,7 +1,8 @@
 package ru.pushtoweb.app
 
 object Config {
-    var APP_WEB_URL = "http://localhost:3000"
+    // Default URL to load in WebView: local offline web assets bundled with APK
+    var APP_WEB_URL = "file:///android_asset/web/index.html"
     var WEBHOOK_URL = ""
     var TELEGRAM_BOT_TOKEN = ""
     var TELEGRAM_CHAT_ID = ""

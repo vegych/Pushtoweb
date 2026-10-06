@@ -37,6 +37,7 @@ export interface ForwardingSettings {
   telegramBotToken: string;
   telegramChatId: string;
   gatewayApiKey: string;
+  customWebhookUrl?: string;
   globalFilterMode: 'whitelist' | 'blacklist';
   otpOnlyGlobal: boolean;
   blockDuplicatesSec: number;
@@ -111,6 +112,8 @@ export interface AndroidNativeBridge {
   updateServiceStatus?: (serviceRunning: boolean, smsEnabled: boolean, pushEnabled: boolean, showNotification?: boolean) => void;
   sendTestTelegram?: () => void;
   syncSettings?: (settingsJson: string) => void;
+  saveTelegramConfig?: (token: string, chatId: string, endpoint: string, webhook: string) => void;
+  getTelegramConfig?: () => string;
 }
 
 declare global {

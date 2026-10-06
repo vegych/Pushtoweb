@@ -7,6 +7,7 @@ import android.service.notification.StatusBarNotification
 class NotificationForwarderService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
+        TelegramSender.ensureConfigLoaded(applicationContext)
 
         // Пропускаем служебные уведомления самого приложения
         if (sbn.packageName == packageName) return

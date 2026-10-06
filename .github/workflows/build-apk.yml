@@ -61,6 +61,18 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Determined release: $TAG (version: $VER, run: ${{ github.run_number }})"
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Web App Offline Assets
+        run: |
+          npm ci || npm install
+          npm run build
+          mkdir -p android/app/src/main/assets/web
+          cp -r dist/* android/app/src/main/assets/web/
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:

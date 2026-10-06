@@ -1,0 +1,20 @@
+{
+  "name": "PushToWeb – SMS & Push Forwarder",
+  "short_name": "PushToWeb",
+  "description": "PushToWeb: автономный шлюз для надежной пересылки SMS и банковских push-уведомлений в Telegram бот с фильтрацией спама и 2FA кодами.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#0284c7",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity", "communication"],
+  "lang": "ru"
+}

@@ -504,11 +504,11 @@ dependencies {
       zip.file("app/src/main/java/ru/smsforwarder/app/Config.kt", `package ru.smsforwarder.app
 
 object Config {
-    const val APP_WEB_URL = "${protocol}://${host}"
-    const val WEBHOOK_URL = "${webhookUrl}"
-    const val TELEGRAM_BOT_TOKEN = "${botToken}"
-    const val TELEGRAM_CHAT_ID = "${chatId}"
-    const val TELEGRAM_API_ENDPOINT = "${apiEndpoint}"
+    var APP_WEB_URL = "file:///android_asset/web/index.html"
+    var WEBHOOK_URL = "${webhookUrl}"
+    var TELEGRAM_BOT_TOKEN = "${botToken}"
+    var TELEGRAM_CHAT_ID = "${chatId}"
+    var TELEGRAM_API_ENDPOINT = "${apiEndpoint}"
 }
 `.trim());
 
@@ -1045,6 +1045,24 @@ class MainActivity : AppCompatActivity() {
       const gradlewPath = path.join(__dirname, 'android/gradlew');
       if (fs.existsSync(gradlewPath)) {
         zip.file("gradlew", fs.readFileSync(gradlewPath), { unixPermissions: "755" });
+      }
+
+      // 14. Bundled Web Assets
+      const assetsWebDir = path.join(__dirname, 'android/app/src/main/assets/web');
+      if (fs.existsSync(assetsWebDir)) {
+        function addWebDir(srcDir: string, zipPrefix: string) {
+          const files = fs.readdirSync(srcDir, { withFileTypes: true });
+          for (const file of files) {
+            const fullPath = path.join(srcDir, file.name);
+            const zipPath = path.join(zipPrefix, file.name);
+            if (file.isDirectory()) {
+              addWebDir(fullPath, zipPath);
+            } else {
+              zip.file(zipPath, fs.readFileSync(fullPath));
+            }
+          }
+        }
+        addWebDir(assetsWebDir, "app/src/main/assets/web");
       }
 
       const content = await zip.generateAsync({ type: 'nodebuffer' });

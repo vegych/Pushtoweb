@@ -97,6 +97,49 @@ class AndroidBridge(private val activity: Activity) {
     }
 
     @JavascriptInterface
+    fun updateServiceStatus(serviceRunning: Boolean, smsEnabled: Boolean, pushEnabled: Boolean, showNotification: Boolean = true) {
+        val prefs = activity.getSharedPreferences("forwarder_service_prefs", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean("key_service_running", serviceRunning)
+            .putBoolean("key_sms_enabled", smsEnabled)
+            .putBoolean("key_push_enabled", pushEnabled)
+            .apply()
+        ForwarderForegroundService.updateStatus(activity, serviceRunning, smsEnabled, pushEnabled)
+    }
+
+    @JavascriptInterface
+    fun saveTelegramConfig(token: String, chatId: String, endpoint: String, webhook: String) {
+        Config.TELEGRAM_BOT_TOKEN = token
+        Config.TELEGRAM_CHAT_ID = chatId
+        if (endpoint.isNotEmpty()) Config.TELEGRAM_API_ENDPOINT = endpoint
+        Config.WEBHOOK_URL = webhook
+
+        val prefs = activity.getSharedPreferences("pushtoweb_config", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("bot_token", token)
+            .putString("chat_id", chatId)
+            .putString("api_endpoint", endpoint)
+            .putString("webhook_url", webhook)
+            .apply()
+    }
+
+    @JavascriptInterface
+    fun getTelegramConfig(): String {
+        val prefs = activity.getSharedPreferences("pushtoweb_config", Context.MODE_PRIVATE)
+        val token = prefs.getString("bot_token", Config.TELEGRAM_BOT_TOKEN) ?: Config.TELEGRAM_BOT_TOKEN
+        val chatId = prefs.getString("chat_id", Config.TELEGRAM_CHAT_ID) ?: Config.TELEGRAM_CHAT_ID
+        val endpoint = prefs.getString("api_endpoint", Config.TELEGRAM_API_ENDPOINT) ?: Config.TELEGRAM_API_ENDPOINT
+        val webhook = prefs.getString("webhook_url", Config.WEBHOOK_URL) ?: Config.WEBHOOK_URL
+
+        val json = org.json.JSONObject()
+        json.put("botToken", token)
+        json.put("chatId", chatId)
+        json.put("apiEndpoint", endpoint)
+        json.put("webhookUrl", webhook)
+        return json.toString()
+    }
+
+    @JavascriptInterface
     fun sendTestTelegram() {
         TelegramSender.forwardPayload(
             type = "notification",

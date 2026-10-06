@@ -120,8 +120,29 @@ export default function App() {
     }
   }, [toast]);
 
-  // Sync settings and rules with backend on mount
+  // Sync settings and rules with backend or Android Native Bridge on mount
   useEffect(() => {
+    // Check if running inside native Android App
+    if (typeof window !== 'undefined' && window.AndroidBridge?.getTelegramConfig) {
+      try {
+        const raw = window.AndroidBridge.getTelegramConfig();
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.botToken || parsed.chatId) {
+            setSettings((prev) => ({
+              ...prev,
+              telegramBotToken: parsed.botToken || prev.telegramBotToken,
+              telegramChatId: parsed.chatId || prev.telegramChatId,
+              telegramApiEndpoint: parsed.apiEndpoint || prev.telegramApiEndpoint,
+              customWebhookUrl: parsed.webhookUrl || prev.customWebhookUrl,
+            }));
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
     fetch('/api/settings')
       .then((res) => res.json())
       .then((backendSettings) => {
@@ -166,6 +187,20 @@ export default function App() {
   const handleUpdateSettings = (newSettings: ForwardingSettings) => {
     setSettings(newSettings);
     saveSettings(newSettings);
+
+    // Sync directly to Android native config if running inside APK
+    if (typeof window !== 'undefined' && window.AndroidBridge?.saveTelegramConfig) {
+      try {
+        window.AndroidBridge.saveTelegramConfig(
+          newSettings.telegramBotToken || '',
+          newSettings.telegramChatId || '',
+          newSettings.telegramApiEndpoint || '',
+          newSettings.customWebhookUrl || ''
+        );
+      } catch (e) {
+        // ignore
+      }
+    }
   };
 
   const handleUpdateRules = (newRules: AppFilterRule[]) => {
