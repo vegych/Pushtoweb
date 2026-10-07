@@ -219,4 +219,28 @@ class AndroidBridge(private val activity: Activity) {
             }
         }
     }
+
+    @JavascriptInterface
+    fun getAppVersionName(): String {
+        return try {
+            val pInfo = activity.packageManager.getPackageInfo(activity.packageName, 0)
+            pInfo.versionName ?: "1.1.0"
+        } catch (e: Exception) {
+            "1.1.0"
+        }
+    }
+
+    @JavascriptInterface
+    fun openExternalUrl(url: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            activity.startActivity(intent)
+        } catch (e: Exception) {
+            activity.runOnUiThread {
+                Toast.makeText(activity, "Не удалось открыть ссылку: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 }

@@ -9,7 +9,7 @@ import {
   AlertCircle,
   PackageCheck
 } from 'lucide-react';
-import { VersionInfo, checkAppUpdate, CURRENT_VERSION, GITHUB_RELEASES_URL } from '../utils/version';
+import { VersionInfo, checkAppUpdate, getInstalledVersion, GITHUB_RELEASES_URL, getReleaseType, getReleaseTypeBadge } from '../utils/version';
 import { Language } from '../utils/i18n';
 
 interface UpdateModalProps {
@@ -44,8 +44,8 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
         } else {
           onShowToast(
             lang === 'ru'
-              ? `У вас установлена последняя версия v${CURRENT_VERSION}`
-              : `You are on the latest version v${CURRENT_VERSION}`,
+              ? `У вас установлена последняя версия v${getInstalledVersion()}`
+              : `You are on the latest version v${getInstalledVersion()}`,
             'success'
           );
         }
@@ -57,6 +57,14 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const url = versionInfo?.downloadUrl || GITHUB_RELEASES_URL;
+    if (typeof window !== 'undefined' && window.AndroidBridge?.openExternalUrl) {
+      e.preventDefault();
+      window.AndroidBridge.openExternalUrl(url);
     }
   };
 
@@ -83,7 +91,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                 {lang === 'ru' ? 'Обновления PushToWeb' : 'PushToWeb Updates'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {lang === 'ru' ? `Текущая версия: v${CURRENT_VERSION}` : `Current version: v${CURRENT_VERSION}`}
+                {lang === 'ru' ? `Текущая версия: v${getInstalledVersion()}` : `Current version: v${getInstalledVersion()}`}
               </p>
             </div>
           </div>
@@ -107,26 +115,34 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
           ) : versionInfo ? (
             <>
               {versionInfo.hasUpdate ? (
-                <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/30 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-semibold text-sm text-sky-600 dark:text-sky-400">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>
-                        {lang === 'ru'
-                          ? `Доступна новая версия v${versionInfo.latestVersion}`
-                          : `New version v${versionInfo.latestVersion} available`}
-                      </span>
+                (() => {
+                  const relType = getReleaseType(versionInfo.currentVersion, versionInfo.latestVersion);
+                  const badge = getReleaseTypeBadge(relType, lang);
+                  return (
+                    <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/30 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200 space-y-2.5">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 font-semibold text-sm text-sky-600 dark:text-sky-400">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>
+                            {lang === 'ru'
+                              ? `Доступна новая версия v${versionInfo.latestVersion}`
+                              : `New version v${versionInfo.latestVersion} available`}
+                          </span>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${badge.bgClass}`}>
+                          {badge.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {relType === 'feature'
+                          ? (lang === 'ru' ? 'Крупный релиз с новыми функциями и возможностями.' : 'Feature update with new capabilities.')
+                          : relType === 'major'
+                          ? (lang === 'ru' ? 'Глобальное обновление архитектуры приложения.' : 'Major release.')
+                          : (lang === 'ru' ? 'Патч с исправлением ошибок и точечными улучшениями.' : 'Patch with bugfixes.')}
+                      </p>
                     </div>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-sky-500 text-white font-bold">
-                      NEW
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                    {lang === 'ru'
-                      ? 'Рекомендуется обновить приложение для получения новых функций и исправлений ошибок.'
-                      : 'We recommend updating to get the latest features and bug fixes.'}
-                  </p>
-                </div>
+                  );
+                })()
               ) : (
                 <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 flex items-center gap-3">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
@@ -135,11 +151,22 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                       {lang === 'ru' ? 'У вас установлена последняя версия' : 'You are on the latest version'}
                     </h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      v{CURRENT_VERSION} — {lang === 'ru' ? 'Обновления не требуются' : 'No updates available'}
+                      v{getInstalledVersion()} — {lang === 'ru' ? 'Обновления не требуются' : 'No updates available'}
                     </p>
                   </div>
                 </div>
               )}
+
+              {/* Versioning Legend Note */}
+              <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+                <span className="font-semibold dark:text-slate-300 text-slate-700 block">
+                  {lang === 'ru' ? 'Формат версий:' : 'Versioning Scheme:'}
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[10px]">
+                  <div><code className="text-sky-500 font-bold">X.1.0</code> — {lang === 'ru' ? 'Крупные релизы и новые фичи' : 'Major feature releases'}</div>
+                  <div><code className="text-emerald-500 font-bold">X.X.1</code> — {lang === 'ru' ? 'Патчи и исправления ошибок' : 'Bugfixes and patches'}</div>
+                </div>
+              </div>
 
               {/* Release Notes */}
               {versionInfo.releaseNotes && (
@@ -174,6 +201,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <a
               href={versionInfo?.downloadUrl || GITHUB_RELEASES_URL}
+              onClick={handleDownloadClick}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold transition-all shadow-md hover:shadow-sky-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95"

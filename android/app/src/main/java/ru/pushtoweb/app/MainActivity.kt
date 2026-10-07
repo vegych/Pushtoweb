@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -61,12 +62,43 @@ class MainActivity : AppCompatActivity() {
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             }
             webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): Boolean {
+                    val url = request?.url?.toString() ?: return false
+                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                        if (!url.contains("app.assets")) {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                startActivity(intent)
+                                return true
+                            } catch (e: Exception) {
+                                Log.e("PushToWeb", "Failed to open url: $url", e)
+                            }
+                        }
+                    }
+                    return false
+                }
+
                 override fun shouldInterceptRequest(
                     view: WebView?,
                     request: WebResourceRequest?
                 ): WebResourceResponse? {
                     val uri = request?.url ?: return null
                     return assetLoader.shouldInterceptRequest(uri)
+                }
+            }
+            setDownloadListener { url, _, _, _, _ ->
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "Ошибка открытия загрузки: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
             webChromeClient = object : WebChromeClient() {

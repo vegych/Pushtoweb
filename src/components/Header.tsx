@@ -2,7 +2,7 @@ import React from 'react';
 import { Menu, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
 import { ForwardingSettings } from '../types';
 import { Language, translations } from '../utils/i18n';
-import { CURRENT_VERSION } from '../utils/version';
+import { getInstalledVersion } from '../utils/version';
 
 export type ActiveTab = 'dashboard' | 'filters' | 'telegram' | 'templates' | 'logs' | 'settings';
 
@@ -73,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
               title={lang === 'ru' ? 'Проверить обновления PushToWeb' : 'Check for updates'}
             >
               <Sparkles className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-              <span>v{CURRENT_VERSION}</span>
+              <span>v{getInstalledVersion()}</span>
             </button>
           )}
 
