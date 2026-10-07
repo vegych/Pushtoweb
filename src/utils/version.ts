@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.12';
+export const CURRENT_VERSION = '1.0.13';
 export const GITHUB_REPO = 'vegych/PushToWeb';
 export const GITHUB_RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases`;
 export const GITHUB_LATEST_RELEASE_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;

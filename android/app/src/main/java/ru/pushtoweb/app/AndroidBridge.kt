@@ -72,28 +72,42 @@ class AndroidBridge(private val activity: Activity) {
         }
     }
 
+    private fun checkAndRequestPermissionsOnEnable(serviceRunning: Boolean, smsEnabled: Boolean, pushEnabled: Boolean) {
+        if (!serviceRunning) return
+        activity.runOnUiThread {
+            if (smsEnabled && !isSmsPermissionGranted()) {
+                requestSmsPermissions()
+            } else if (pushEnabled && !isNotificationAccessGranted()) {
+                requestNotificationAccess()
+            }
+        }
+    }
+
     @JavascriptInterface
     fun toggleService(enabled: Boolean) {
         val prefs = activity.getSharedPreferences("forwarder_service_prefs", Context.MODE_PRIVATE)
-        val sms = prefs.getBoolean("key_sms_enabled", true)
-        val push = prefs.getBoolean("key_push_enabled", true)
+        val sms = prefs.getBoolean("key_sms_enabled", false)
+        val push = prefs.getBoolean("key_push_enabled", false)
         ForwarderForegroundService.updateStatus(activity, enabled, sms, push)
+        checkAndRequestPermissionsOnEnable(enabled, sms, push)
     }
 
     @JavascriptInterface
     fun toggleSms(enabled: Boolean) {
         val prefs = activity.getSharedPreferences("forwarder_service_prefs", Context.MODE_PRIVATE)
-        val running = prefs.getBoolean("key_service_running", true)
-        val push = prefs.getBoolean("key_push_enabled", true)
+        val running = prefs.getBoolean("key_service_running", false)
+        val push = prefs.getBoolean("key_push_enabled", false)
         ForwarderForegroundService.updateStatus(activity, running, enabled, push)
+        checkAndRequestPermissionsOnEnable(running, enabled, push)
     }
 
     @JavascriptInterface
     fun togglePush(enabled: Boolean) {
         val prefs = activity.getSharedPreferences("forwarder_service_prefs", Context.MODE_PRIVATE)
-        val running = prefs.getBoolean("key_service_running", true)
-        val sms = prefs.getBoolean("key_sms_enabled", true)
+        val running = prefs.getBoolean("key_service_running", false)
+        val sms = prefs.getBoolean("key_sms_enabled", false)
         ForwarderForegroundService.updateStatus(activity, running, sms, enabled)
+        checkAndRequestPermissionsOnEnable(running, sms, enabled)
     }
 
     @JavascriptInterface
@@ -105,6 +119,7 @@ class AndroidBridge(private val activity: Activity) {
             .putBoolean("key_push_enabled", pushEnabled)
             .apply()
         ForwarderForegroundService.updateStatus(activity, serviceRunning, smsEnabled, pushEnabled)
+        checkAndRequestPermissionsOnEnable(serviceRunning, smsEnabled, pushEnabled)
     }
 
     @JavascriptInterface

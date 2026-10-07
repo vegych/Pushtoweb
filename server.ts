@@ -1062,7 +1062,11 @@ class MainActivity : AppCompatActivity() {
 Приложение работает 100% автономно в фоне 24/7!
 `.trim());
 
-      // 13. Gradle wrapper files & scripts
+      // 13. Gradle wrapper files, signing keystore & scripts
+      const releaseP12Path = path.join(__dirname, 'android/app/release.p12');
+      if (fs.existsSync(releaseP12Path)) {
+        zip.file("app/release.p12", fs.readFileSync(releaseP12Path));
+      }
       const wrapperJarPath = path.join(__dirname, 'android/gradle/wrapper/gradle-wrapper.jar');
       if (fs.existsSync(wrapperJarPath)) {
         zip.file("gradle/wrapper/gradle-wrapper.jar", fs.readFileSync(wrapperJarPath));

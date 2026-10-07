@@ -527,9 +527,9 @@ export const PREDEFINED_APPS: AppFilterRule[] = [
 ];
 
 export const DEFAULT_SETTINGS = {
-  serviceRunning: true, // Главный переключатель работы сервиса пересылки
-  forwardSmsEnabled: true, // Включить пересылку SMS
-  forwardPushEnabled: true, // Включить пересылку уведомлений (push)
+  serviceRunning: false, // Главный переключатель работы сервиса пересылки (по умолчанию выключен)
+  forwardSmsEnabled: false, // Включить пересылку SMS (по умолчанию выключено)
+  forwardPushEnabled: false, // Включить пересылку уведомлений (push) (по умолчанию выключено)
   telegramApiEndpoint: 'https://api.telegram.org', // API чата в Telegram
   telegramBotToken: '',
   telegramChatId: '',

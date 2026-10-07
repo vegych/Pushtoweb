@@ -41,8 +41,20 @@ android {
         applicationId = "ru.pushtoweb.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = (project.findProperty("versionCode") as? String)?.toIntOrNull() ?: 1
-        versionName = (project.findProperty("versionName") as? String) ?: "1.0.0"
+
+        val parsedVersionName = (project.findProperty("versionName") as? String) ?: "1.0.13"
+        val calculatedCode = try {
+            val parts = parsedVersionName.replace("^v".toRegex(), "").split(".")
+            val major = parts.getOrNull(0)?.toIntOrNull() ?: 1
+            val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
+            val patch = parts.getOrNull(2)?.toIntOrNull() ?: 0
+            major * 10000 + minor * 100 + patch
+        } catch (e: Exception) {
+            10013
+        }
+
+        versionCode = (project.findProperty("versionCode") as? String)?.toIntOrNull() ?: calculatedCode
+        versionName = parsedVersionName
     }
 
     signingConfigs {

@@ -38,11 +38,11 @@ class MainActivity : AppCompatActivity() {
         // Load saved Telegram credentials into Config object
         loadSavedConfig()
 
-        // Request permissions on startup
-        requestStartupPermissions()
-
-        // Auto start background keep-alive service
-        ForwarderForegroundService.start(this)
+        // Start service only if explicitly enabled by user previously
+        val fgPrefs = getSharedPreferences("forwarder_service_prefs", Context.MODE_PRIVATE)
+        if (fgPrefs.getBoolean("key_service_running", false)) {
+            ForwarderForegroundService.start(this)
+        }
 
         val assetLoader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))

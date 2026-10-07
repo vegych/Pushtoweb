@@ -32,8 +32,8 @@ class NotificationForwarderService : NotificationListenerService() {
 
         // Check if service running and push forwarding is enabled
         val prefs = applicationContext.getSharedPreferences("forwarder_service_prefs", Context.MODE_PRIVATE)
-        val serviceRunning = prefs.getBoolean("key_service_running", true)
-        val pushEnabled = prefs.getBoolean("key_push_enabled", true)
+        val serviceRunning = prefs.getBoolean("key_service_running", false)
+        val pushEnabled = prefs.getBoolean("key_push_enabled", false)
         if (!serviceRunning || !pushEnabled) return
 
         val extras = sbn.notification.extras ?: return

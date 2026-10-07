@@ -65,12 +65,21 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   // Master Service switch handler
   const handleToggleService = () => {
     const nextVal = !isServiceRunning;
-    onUpdateSettings({ ...settings, serviceRunning: nextVal });
+    const smsVal = nextVal && !settings.forwardSmsEnabled && !settings.forwardPushEnabled ? true : settings.forwardSmsEnabled;
+    const pushVal = nextVal && !settings.forwardSmsEnabled && !settings.forwardPushEnabled ? true : settings.forwardPushEnabled;
+
+    onUpdateSettings({ 
+      ...settings, 
+      serviceRunning: nextVal,
+      forwardSmsEnabled: smsVal,
+      forwardPushEnabled: pushVal
+    });
+
     if (window.AndroidBridge?.updateServiceStatus) {
       window.AndroidBridge.updateServiceStatus(
         nextVal,
-        settings.forwardSmsEnabled,
-        settings.forwardPushEnabled,
+        smsVal,
+        pushVal,
         settings.showNotificationWhenStopped ?? false
       );
     } else if (window.AndroidBridge?.toggleService) {
@@ -147,8 +156,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-5 space-y-3.5">
-      {/* ⚠️ NOTIFICATION ACCESS WARNING BANNER (If running inside APK without Notification Access) */}
-      {isNativeAndroid && !hasNotifPermission && (
+      {/* ⚠️ NOTIFICATION ACCESS WARNING BANNER (If running inside APK without Notification Access when service is running) */}
+      {isNativeAndroid && isServiceRunning && !hasNotifPermission && (
         <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-300 text-xs space-y-2.5 shadow-md animate-in fade-in">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 font-bold text-amber-400 text-sm">
