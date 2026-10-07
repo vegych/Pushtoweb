@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -9,8 +11,8 @@ val ensureKeystore = tasks.register("ensureKeystore") {
         if (!ksFile.exists()) {
             println("Generating release.jks keystore...")
             val javaHome = System.getProperty("java.home")
-            val keytoolBin = java.io.File(javaHome, "bin/keytool").absolutePath
-            val keytoolCmd = if (java.io.File(keytoolBin).exists()) keytoolBin else "keytool"
+            val keytoolBin = File(javaHome, "bin/keytool").absolutePath
+            val keytoolCmd = if (File(keytoolBin).exists()) keytoolBin else "keytool"
 
             project.exec {
                 commandLine(
