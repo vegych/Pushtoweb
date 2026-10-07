@@ -1,9 +1,10 @@
 import React from 'react';
-import { Menu, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Menu, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
 import { ForwardingSettings } from '../types';
 import { Language, translations } from '../utils/i18n';
+import { CURRENT_VERSION } from '../utils/version';
 
-export type ActiveTab = 'dashboard' | 'filters' | 'telegram' | 'templates' | 'logs' | 'setup' | 'settings';
+export type ActiveTab = 'dashboard' | 'filters' | 'telegram' | 'templates' | 'logs' | 'settings';
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -12,6 +13,7 @@ interface HeaderProps {
   isConfigured: boolean;
   settings: ForwardingSettings;
   lang: Language;
+  onOpenUpdateModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   isConfigured,
   settings,
   lang,
+  onOpenUpdateModal,
 }) => {
   const t = translations[lang];
 
@@ -30,7 +33,6 @@ export const Header: React.FC<HeaderProps> = ({
     telegram: t.tabTelegram,
     templates: t.tabTemplates,
     logs: t.tabLogs,
-    setup: t.tabSetup,
     settings: t.tabSettings,
   };
 
@@ -62,8 +64,19 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Right: Clean status indicator */}
-        <div className="flex items-center gap-3 text-xs">
+        {/* Right: Clean status indicator + Version / Update check */}
+        <div className="flex items-center gap-2.5 sm:gap-3 text-xs">
+          {onOpenUpdateModal && (
+            <button
+              onClick={onOpenUpdateModal}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/80 hover:border-sky-500/50 dark:hover:border-sky-500/50 text-slate-700 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-semibold text-[11px] sm:text-xs transition-all cursor-pointer active:scale-95 shadow-sm"
+              title={lang === 'ru' ? 'Проверить обновления PushToWeb' : 'Check for updates'}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+              <span>v{CURRENT_VERSION}</span>
+            </button>
+          )}
+
           {isConfigured ? (
             <span className="flex items-center gap-1.5 dark:text-emerald-400 text-emerald-600 font-medium text-[11px] sm:text-xs">
               <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />

@@ -112,7 +112,7 @@ export function syncDeviceApps(
           name: app.appName || app.packageName,
           packageName: app.packageName,
           category,
-          enabled: true,
+          enabled: category === 'sms', // Only SMS apps enabled by default, all push notifications disabled by default
           filterMode: 'all',
           keywords: [],
           excludeKeywords: [],

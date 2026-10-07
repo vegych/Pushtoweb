@@ -6,8 +6,8 @@ import { AppFiltersTab } from './components/AppFiltersTab';
 import { TelegramSettingsTab } from './components/TelegramSettingsTab';
 import { TemplateEditorTab } from './components/TemplateEditorTab';
 import { LogsTab } from './components/LogsTab';
-import { AndroidSetupTab } from './components/AndroidSetupTab';
 import { SettingsTab } from './components/SettingsTab';
+import { UpdateModal } from './components/UpdateModal';
 import { AppFilterRule, ForwardedMessageLog, ForwardingSettings } from './types';
 import { Language, LanguageMode, Theme, ThemeMode, translations, detectSystemLanguage, detectSystemTheme } from './utils/i18n';
 import { 
@@ -30,6 +30,7 @@ export default function App() {
   const [logs, setLogs] = useState<ForwardedMessageLog[]>(loadLogs);
   const [isTesting, setIsTesting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; id: number } | null>(null);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
   // Automatic language state with system detection
   const [langMode, setLangMode] = useState<LanguageMode>(() => {
@@ -325,6 +326,7 @@ export default function App() {
         isConfigured={isConfigured}
         settings={settings}
         lang={lang}
+        onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
       />
 
       {/* Main Content Body */}
@@ -379,13 +381,6 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'setup' && (
-          <AndroidSetupTab
-            settings={settings}
-            onShowToast={showToast}
-          />
-        )}
-
         {activeTab === 'settings' && (
           <SettingsTab
             settings={settings}
@@ -402,6 +397,14 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* App Update Checker Modal */}
+      <UpdateModal
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
+        lang={lang}
+        onShowToast={showToast}
+      />
     </div>
   );
 }

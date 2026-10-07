@@ -37,28 +37,11 @@ class NotificationForwarderService : NotificationListenerService() {
         if (!serviceRunning || !pushEnabled) return
 
         val extras = sbn.notification.extras ?: return
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
-
-        // Extract body text from all possible Android notification fields
-        var text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
-        if (text.isEmpty()) {
-            text = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString() ?: ""
-        }
-        if (text.isEmpty()) {
-            text = extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString() ?: ""
-        }
-        if (text.isEmpty()) {
-            text = sbn.notification.tickerText?.toString() ?: ""
-        }
-        if (text.isEmpty()) {
-            val lines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
-            if (!lines.isNullOrEmpty()) {
-                text = lines.joinToString("\n") { it.toString() }
-            }
-        }
+        val title = (extras.getCharSequence(Notification.EXTRA_TITLE)
+            ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG)
+            ?: "").toString().trim()
 
         val appPackage = sbn.packageName ?: ""
-
         val pm = applicationContext.packageManager
         val appName = try {
             val appInfo = pm.getApplicationInfo(appPackage, 0)
@@ -67,15 +50,25 @@ class NotificationForwarderService : NotificationListenerService() {
             appPackage
         }
 
-        if (text.isNotEmpty() || title.isNotEmpty()) {
+        // Process notification and extract only new delta messages
+        val newMessages = NotificationDeduplicator.processNotification(sbn)
+
+        for (msgText in newMessages) {
             TelegramSender.forwardPayload(
                 type = "notification",
                 sender = title.ifEmpty { appName },
-                text = text,
+                text = msgText,
                 appName = appName,
                 packageName = appPackage,
                 title = title
             )
         }
+    }
+
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        if (sbn == null) return
+        val appPackage = sbn.packageName ?: ""
+        val sbnKey = sbn.key ?: "${appPackage}_${sbn.id}"
+        NotificationDeduplicator.onNotificationRemoved(sbnKey)
     }
 }

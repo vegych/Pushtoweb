@@ -314,7 +314,7 @@ export const TelegramSettingsTab: React.FC<TelegramSettingsTabProps> = ({
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
             <h3 className="font-semibold text-white text-base">Шлюз для смартфона (Webhook URL)</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Этот адрес вы указываете в MacroDroid или Tasker на телефоне:
+              Прямой HTTP Webhook адрес для внешних интеграций и передачи уведомлений:
             </p>
 
             <div className="space-y-2">

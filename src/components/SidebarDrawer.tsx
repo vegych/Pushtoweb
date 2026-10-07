@@ -6,11 +6,10 @@ import {
   Globe, 
   FileText, 
   ClipboardList, 
-  Smartphone, 
   Send, 
   MessageSquareText,
-  Copy,
-  Check,
+  Copy, 
+  Check, 
   Settings as SettingsIcon
 } from 'lucide-react';
 import { ActiveTab } from './Header';
@@ -106,15 +105,9 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
       badgeColor: 'dark:text-slate-300 text-slate-700 dark:bg-slate-800 bg-slate-200 dark:border-slate-700 border-slate-300',
     },
     {
-      id: 'setup',
-      label: t.tabSetup,
-      description: lang === 'ru' ? 'Подключение MacroDroid / Tasker' : 'MacroDroid, Tasker & APK setup',
-      icon: Smartphone,
-    },
-    {
       id: 'settings',
       label: t.tabSettings,
-      description: lang === 'ru' ? 'Тема, язык, работа при выключении, бекап' : 'Theme, language, background & backup',
+      description: lang === 'ru' ? 'Параметры фоновой работы Android и бэкап' : 'Android background operation & backup',
       icon: SettingsIcon,
     },
   ];

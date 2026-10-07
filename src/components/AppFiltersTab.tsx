@@ -153,7 +153,7 @@ export const AppFiltersTab: React.FC<AppFiltersTabProps> = ({
           name: guessedName.charAt(0).toUpperCase() + guessedName.slice(1),
           packageName: cleanPkg,
           category: 'custom',
-          enabled: true,
+          enabled: false,
           filterMode: 'all',
           keywords: [],
           excludeKeywords: [],

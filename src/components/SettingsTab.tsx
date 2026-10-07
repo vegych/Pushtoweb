@@ -3,18 +3,16 @@ import {
   Settings as SettingsIcon, 
   Power, 
   Bell, 
-  Sun, 
-  Moon, 
-  Laptop, 
-  Sparkles, 
+  Sun,
+  Moon,
+  Laptop,
+  Sparkles,
   Download, 
   Upload, 
   RotateCcw, 
-  ShieldAlert,
   BellOff,
   CheckCircle2,
-  FileJson,
-  Sliders
+  FileJson
 } from 'lucide-react';
 import { ForwardingSettings, AppFilterRule } from '../types';
 import { Language, LanguageMode, Theme, ThemeMode, translations } from '../utils/i18n';

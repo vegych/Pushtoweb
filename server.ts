@@ -52,6 +52,16 @@ async function startServer() {
     });
   });
 
+  // App version check
+  app.get('/api/version', (req, res) => {
+    res.json({
+      version: '1.0.12',
+      latestVersion: '1.0.12',
+      downloadUrl: 'https://github.com/vegych/PushToWeb/releases/latest',
+      releaseNotes: 'Улучшена обработка обновляющихся уведомлений, раздельная пересылка сообщений, централизованные настройки и встроенная система автообновлений.',
+    });
+  });
+
   // Settings sync
   app.get('/api/settings', (req, res) => {
     res.json(serverSettings);
