@@ -40,9 +40,8 @@ object NotificationDeduplicator {
         val rawMessages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
         if (!rawMessages.isNullOrEmpty()) {
             for (item in rawMessages) {
-                val msgText = when {
-                    item is android.os.Bundle -> item.getCharSequence("text")?.toString()?.trim() ?: ""
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && item is Notification.MessagingStyle.Message -> item.text?.toString()?.trim() ?: ""
+                val msgText = when (item) {
+                    is android.os.Bundle -> item.getCharSequence("text")?.toString()?.trim() ?: ""
                     else -> ""
                 }
                 if (msgText.isNotEmpty() && shouldSend(sbnKey, appPackage, title, msgText, sentSet, now)) {
