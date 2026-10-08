@@ -43,12 +43,18 @@ class AndroidBridge(private val activity: Activity) {
 
     @JavascriptInterface
     fun requestSmsPermissions() {
+        val perms = mutableListOf(
+            android.Manifest.permission.RECEIVE_SMS,
+            android.Manifest.permission.READ_SMS
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(activity, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                perms.add(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
         ActivityCompat.requestPermissions(
             activity,
-            arrayOf(
-                android.Manifest.permission.RECEIVE_SMS,
-                android.Manifest.permission.READ_SMS
-            ),
+            perms.toTypedArray(),
             101
         )
     }
@@ -79,6 +85,13 @@ class AndroidBridge(private val activity: Activity) {
                 requestSmsPermissions()
             } else if (pushEnabled && !isNotificationAccessGranted()) {
                 requestNotificationAccess()
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(activity, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                    101
+                )
             }
         }
     }

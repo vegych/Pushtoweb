@@ -14,7 +14,8 @@ import {
   Globe,
   Terminal,
   MessageSquareText,
-  Key
+  Key,
+  AlertTriangle
 } from 'lucide-react';
 import { ForwardingSettings } from '../types';
 import { testBotToken, detectRecentChat, sendTelegramMessage } from '../services/telegram';
@@ -44,7 +45,9 @@ export const TelegramSettingsTab: React.FC<TelegramSettingsTabProps> = ({
 
   const webhookUrl = `${window.location.origin}/api/forward?key=${apiKey}`;
   const cleanEndpoint = (apiEndpoint || 'https://api.telegram.org').replace(/\/+$/, '');
-  const telegramChatApiUrl = `${cleanEndpoint}/bot${botToken ? botToken.substring(0, 10) + '...' : '<BOT_TOKEN>'}/sendMessage?chat_id=${chatId || '<CHAT_ID>'}`;
+  const isValidChatId = Boolean(chatId && /^(@[a-zA-Z0-9_]{5,32}|-?\d+)$/.test(chatId.trim()));
+  const displayChatId = isValidChatId ? chatId.trim() : '<CHAT_ID>';
+  const telegramChatApiUrl = `${cleanEndpoint}/bot${botToken ? botToken.substring(0, 10) + '...' : '<BOT_TOKEN>'}/sendMessage?chat_id=${displayChatId}`;
 
   const handleSaveApiSettings = () => {
     onUpdateSettings({
@@ -268,6 +271,12 @@ export const TelegramSettingsTab: React.FC<TelegramSettingsTabProps> = ({
                   <span>{isDetectingChat ? 'Поиск...' : 'Автоопределить ID'}</span>
                 </button>
               </div>
+              {chatId && !isValidChatId && (
+                <p className="text-[11px] text-amber-400 font-medium pt-1 flex items-center gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  <span>Введенный текст не является валидным Chat ID (должен состоять из цифр, например 123456789 или быть юзернеймом канала @channel).</span>
+                </p>
+              )}
             </div>
 
             {/* Chat API preview */}

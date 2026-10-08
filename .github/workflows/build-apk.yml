@@ -127,6 +127,38 @@ jobs:
             build_output/PushToWeb-${{ env.APP_VERSION }}.apk.sha256
           retention-days: 90
 
+      - name: Extract Release Notes from CHANGELOG.md
+        id: extract_changelog
+        run: |
+          python3 -c "
+          import re, os
+
+          changelog_path = 'CHANGELOG.md'
+          version = os.environ.get('APP_VERSION', '').strip().lstrip('v')
+          notes = ''
+
+          if os.path.exists(changelog_path):
+              with open(changelog_path, 'r', encoding='utf-8') as f:
+                  content = f.read()
+
+              pattern = r'##\s*\[?v?' + re.escape(version) + r'\]?.*?\n(.*?)(?=\n##\s*\[?v?\d|\Z)'
+              match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+              
+              if match:
+                  notes = match.group(1).strip()
+              else:
+                  fallback_pattern = r'##\s*\[?v?\d+[\d\.]*\b.*?\n(.*?)(?=\n##\s*\[?v?\d|\Z)'
+                  fb_match = re.search(fallback_pattern, content, re.DOTALL | re.IGNORECASE)
+                  if fb_match:
+                      notes = fb_match.group(1).strip()
+
+          if not notes:
+              notes = '• Улучшения производительности и исправления ошибок.'
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as out:
+              out.write('extracted_notes<<EOF\n' + notes + '\nEOF\n')
+          "
+
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
@@ -145,7 +177,8 @@ jobs:
             - **Контрольная сумма**: см. `PushToWeb-${{ env.APP_VERSION }}.apk.sha256`
 
             ### 📋 Изменения
-          generate_release_notes: true
+            ${{ steps.extract_changelog.outputs.extracted_notes }}
+          generate_release_notes: false
           draft: false
           prerelease: false
         env:

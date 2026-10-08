@@ -156,8 +156,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-5 space-y-3.5">
-      {/* ⚠️ NOTIFICATION ACCESS WARNING BANNER (If running inside APK without Notification Access when service is running) */}
-      {isNativeAndroid && isServiceRunning && !hasNotifPermission && (
+      {/* ⚠️ NOTIFICATION ACCESS WARNING BANNER (If running inside APK without Notification Access) */}
+      {isNativeAndroid && !hasNotifPermission && (
         <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-300 text-xs space-y-2.5 shadow-md animate-in fade-in">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 font-bold text-amber-400 text-sm">
@@ -170,7 +170,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           </div>
 
           <p className="text-[11px] leading-relaxed text-slate-300">
-            Пересылка SMS включена, но для перехвата push-уведомлений от банков (Сбер, Т-Банк) и мессенджеров необходимо разрешить <b>«Доступ к уведомлениям»</b> для PushToWeb в настройках Android.
+            Для перехвата push-уведомлений от банков (Сбер, Т-Банк) и мессенджеров необходимо разрешить <b>«Доступ к уведомлениям»</b> для PushToWeb в настройках Android.
           </p>
 
           <button
