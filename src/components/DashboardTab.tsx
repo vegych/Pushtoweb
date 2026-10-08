@@ -12,7 +12,9 @@ import {
   Send,
   Radio,
   Sparkles,
-  Smartphone
+  Smartphone,
+  Zap,
+  X
 } from 'lucide-react';
 import { AppFilterRule, ForwardedMessageLog, ForwardingSettings } from '../types';
 import { ActiveTab } from './Header';
@@ -53,14 +55,47 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
     return true;
   });
 
+  const [isBatteryIgnored, setIsBatteryIgnored] = React.useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.AndroidBridge?.isBatteryOptimizationIgnored) {
+      return Boolean(window.AndroidBridge.isBatteryOptimizationIgnored());
+    }
+    return true;
+  });
+
+  const [isBatteryDismissed, setIsBatteryDismissed] = React.useState<boolean>(() => {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('pushtoweb_battery_dismissed') === 'true';
+    }
+    return false;
+  });
+
   React.useEffect(() => {
-    if (isNativeAndroid && window.AndroidBridge?.isNotificationAccessGranted) {
-      const check = () => setHasNotifPermission(Boolean(window.AndroidBridge?.isNotificationAccessGranted?.()));
+    if (isNativeAndroid) {
+      const check = () => {
+        if (window.AndroidBridge?.isNotificationAccessGranted) {
+          setHasNotifPermission(Boolean(window.AndroidBridge.isNotificationAccessGranted()));
+        }
+        if (window.AndroidBridge?.isBatteryOptimizationIgnored) {
+          setIsBatteryIgnored(Boolean(window.AndroidBridge.isBatteryOptimizationIgnored()));
+        }
+      };
       check();
+      window.addEventListener('focus', check);
       const interval = setInterval(check, 3000);
-      return () => clearInterval(interval);
+      return () => {
+        window.removeEventListener('focus', check);
+        clearInterval(interval);
+      };
     }
   }, [isNativeAndroid]);
+
+  const handleDismissBatteryPrompt = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('pushtoweb_battery_dismissed', 'true');
+    }
+    setIsBatteryDismissed(true);
+  };
 
   // Master Service switch handler
   const handleToggleService = () => {
@@ -183,6 +218,51 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             <Bell className="w-3.5 h-3.5" />
             <span>Разрешить доступ к уведомлениям в настройках Android</span>
           </button>
+        </div>
+      )}
+
+      {/* ⚡ BATTERY CONSUMPTION & BACKGROUND OPERATION PROMPT (One-time dismissible banner) */}
+      {isNativeAndroid && !isBatteryIgnored && !isBatteryDismissed && (
+        <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-200 text-xs space-y-2.5 shadow-md animate-in fade-in">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 font-bold text-sky-400 text-sm">
+              <Zap className="w-4 h-4 shrink-0 text-sky-400" />
+              <span>{t.batteryUnrestrictedTitle}</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleDismissBatteryPrompt}
+              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800/60 transition-colors cursor-pointer"
+              title={t.batteryBtnDismiss}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <p className="text-[11px] leading-relaxed text-slate-300">
+            {t.batteryUnrestrictedDesc}
+          </p>
+
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
+            <button
+              type="button"
+              onClick={() => {
+                window.AndroidBridge?.requestBatteryOptimizationExemption?.();
+              }}
+              className="px-3.5 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>{t.batteryBtnGrant}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDismissBatteryPrompt}
+              className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors cursor-pointer"
+            >
+              <span>{t.batteryBtnDismiss}</span>
+            </button>
+          </div>
         </div>
       )}
 

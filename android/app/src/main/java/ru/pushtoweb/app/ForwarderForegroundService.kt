@@ -70,10 +70,10 @@ class ForwarderForegroundService : Service() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val serviceRunning = intent?.getBooleanExtra("serviceRunning", prefs.getBoolean(KEY_SERVICE_RUNNING, false))
             ?: prefs.getBoolean(KEY_SERVICE_RUNNING, false)
-        val smsEnabled = intent?.getBooleanExtra("smsEnabled", prefs.getBoolean(KEY_SMS_ENABLED, false))
-            ?: prefs.getBoolean(KEY_SMS_ENABLED, false)
-        val pushEnabled = intent?.getBooleanExtra("pushEnabled", prefs.getBoolean(KEY_PUSH_ENABLED, false))
-            ?: prefs.getBoolean(KEY_PUSH_ENABLED, false)
+        val smsEnabled = intent?.getBooleanExtra("smsEnabled", prefs.getBoolean(KEY_SMS_ENABLED, true))
+            ?: prefs.getBoolean(KEY_SMS_ENABLED, true)
+        val pushEnabled = intent?.getBooleanExtra("pushEnabled", prefs.getBoolean(KEY_PUSH_ENABLED, true))
+            ?: prefs.getBoolean(KEY_PUSH_ENABLED, true)
         val showNotifWhenStopped = intent?.getBooleanExtra("showNotifWhenStopped", prefs.getBoolean(KEY_SHOW_NOTIF_WHEN_STOPPED, false))
             ?: prefs.getBoolean(KEY_SHOW_NOTIF_WHEN_STOPPED, false)
 
@@ -95,8 +95,8 @@ class ForwarderForegroundService : Service() {
     private fun startWithCurrentStatus() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val serviceRunning = prefs.getBoolean(KEY_SERVICE_RUNNING, false)
-        val smsEnabled = prefs.getBoolean(KEY_SMS_ENABLED, false)
-        val pushEnabled = prefs.getBoolean(KEY_PUSH_ENABLED, false)
+        val smsEnabled = prefs.getBoolean(KEY_SMS_ENABLED, true)
+        val pushEnabled = prefs.getBoolean(KEY_PUSH_ENABLED, true)
         val showNotifWhenStopped = prefs.getBoolean(KEY_SHOW_NOTIF_WHEN_STOPPED, false)
 
         if (!serviceRunning && !showNotifWhenStopped) {

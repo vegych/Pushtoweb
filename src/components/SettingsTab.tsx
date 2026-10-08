@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import { 
-  Settings as SettingsIcon, 
   Power, 
   Bell, 
   Sun,
@@ -12,7 +11,9 @@ import {
   RotateCcw, 
   BellOff,
   CheckCircle2,
-  FileJson
+  FileJson,
+  Zap,
+  AlertTriangle
 } from 'lucide-react';
 import { ForwardingSettings, AppFilterRule } from '../types';
 import { Language, LanguageMode, Theme, ThemeMode, translations } from '../utils/i18n';
@@ -47,6 +48,41 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 }) => {
   const t = translations[lang];
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isNativeAndroid = typeof window !== 'undefined' && Boolean(window.AndroidBridge?.isNativeApp?.());
+
+  const [hasNotifPermission, setHasNotifPermission] = React.useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.AndroidBridge?.isNotificationAccessGranted) {
+      return Boolean(window.AndroidBridge.isNotificationAccessGranted());
+    }
+    return true;
+  });
+
+  const [isBatteryIgnored, setIsBatteryIgnored] = React.useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.AndroidBridge?.isBatteryOptimizationIgnored) {
+      return Boolean(window.AndroidBridge.isBatteryOptimizationIgnored());
+    }
+    return true;
+  });
+
+  React.useEffect(() => {
+    if (isNativeAndroid) {
+      const check = () => {
+        if (window.AndroidBridge?.isNotificationAccessGranted) {
+          setHasNotifPermission(Boolean(window.AndroidBridge.isNotificationAccessGranted()));
+        }
+        if (window.AndroidBridge?.isBatteryOptimizationIgnored) {
+          setIsBatteryIgnored(Boolean(window.AndroidBridge.isBatteryOptimizationIgnored()));
+        }
+      };
+      check();
+      window.addEventListener('focus', check);
+      const interval = setInterval(check, 3000);
+      return () => {
+        window.removeEventListener('focus', check);
+        clearInterval(interval);
+      };
+    }
+  }, [isNativeAndroid]);
 
   // Toggle handlers with Android Bridge sync
   const handleToggleShowNotifWhenStopped = () => {
@@ -153,23 +189,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-6 py-5 space-y-6">
-      {/* Header Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl dark:bg-slate-900 bg-white border dark:border-slate-800 border-slate-200 shadow-sm flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500 shrink-0">
-            <SettingsIcon className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-base sm:text-lg font-bold dark:text-white text-slate-900 tracking-tight">
-              {t.settingsTitle}
-            </h1>
-            <p className="text-xs dark:text-slate-400 text-slate-500">
-              {t.settingsDesc}
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* 1. Android Background & Notification Settings */}
       <div className="p-4 sm:p-5 rounded-2xl dark:bg-slate-900 bg-white border dark:border-slate-800 border-slate-200 shadow-sm space-y-4">
         <div className="flex items-center gap-2 border-b dark:border-slate-800 border-slate-200 pb-3">
@@ -180,6 +199,95 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
         <div className="space-y-3">
+          {/* Item 1: Battery Consumption & Background Unrestricted */}
+          <div className="p-3.5 rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-950/40 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                isBatteryIgnored
+                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'
+                  : 'bg-amber-500/10 border border-amber-500/20 text-amber-500'
+              }`}>
+                <Zap className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-semibold dark:text-white text-slate-900 flex flex-wrap items-center gap-2">
+                  <span>{t.batteryUnrestrictedTitle}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${
+                    isBatteryIgnored
+                      ? 'dark:bg-emerald-950/80 bg-emerald-100/80 dark:text-emerald-300 text-emerald-700 dark:border-emerald-600/50 border-emerald-300'
+                      : 'dark:bg-amber-950/80 bg-amber-100/80 dark:text-amber-300 text-amber-700 dark:border-amber-600/50 border-amber-300'
+                  }`}>
+                    {isBatteryIgnored ? t.batteryStatusGranted : t.batteryStatusRestricted}
+                  </span>
+                </div>
+                <p className="text-[11px] dark:text-slate-400 text-slate-500 mt-0.5 leading-relaxed">
+                  {t.batteryUnrestrictedDesc}
+                </p>
+              </div>
+            </div>
+
+            <div className="shrink-0 flex items-center gap-2 pl-11 sm:pl-0">
+              <button
+                type="button"
+                onClick={() => {
+                  window.AndroidBridge?.requestBatteryOptimizationExemption?.();
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 ${
+                  isBatteryIgnored
+                    ? 'dark:bg-slate-800 bg-slate-200 hover:dark:bg-slate-700 hover:bg-slate-300 dark:text-slate-300 text-slate-700'
+                    : 'bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold'
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>{isBatteryIgnored ? t.batteryBtnOpenSettings : t.batteryBtnGrant}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Item 2: Notification Listener Access */}
+          <div className="p-3.5 rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-950/40 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                hasNotifPermission
+                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'
+                  : 'bg-amber-500/10 border border-amber-500/20 text-amber-500'
+              }`}>
+                <Bell className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-semibold dark:text-white text-slate-900 flex flex-wrap items-center gap-2">
+                  <span>{t.notifAccessSection}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${
+                    hasNotifPermission
+                      ? 'dark:bg-emerald-950/80 bg-emerald-100/80 dark:text-emerald-300 text-emerald-700 dark:border-emerald-600/50 border-emerald-300'
+                      : 'dark:bg-amber-950/80 bg-amber-100/80 dark:text-amber-300 text-amber-700 dark:border-amber-600/50 border-amber-300'
+                  }`}>
+                    {hasNotifPermission ? t.notifAccessGranted : t.notifAccessMissing}
+                  </span>
+                </div>
+                <p className="text-[11px] dark:text-slate-400 text-slate-500 mt-0.5 leading-relaxed">
+                  {hasNotifPermission ? t.notifAccessGranted : t.notifAccessMissing}
+                </p>
+              </div>
+            </div>
+
+            <div className="shrink-0 flex items-center gap-2 pl-11 sm:pl-0">
+              <button
+                type="button"
+                onClick={() => {
+                  window.AndroidBridge?.requestNotificationAccess?.();
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 ${
+                  hasNotifPermission
+                    ? 'dark:bg-slate-800 bg-slate-200 hover:dark:bg-slate-700 hover:bg-slate-300 dark:text-slate-300 text-slate-700'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold'
+                }`}
+              >
+                <Bell className="w-3.5 h-3.5" />
+                <span>{hasNotifPermission ? t.batteryBtnOpenSettings : t.notifAccessBtn}</span>
+              </button>
+            </div>
+          </div>
           {/* Toggle 1: Work when disabled / Notification when stopped */}
           <div 
             onClick={handleToggleShowNotifWhenStopped}

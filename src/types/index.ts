@@ -117,8 +117,10 @@ export interface AndroidNativeBridge {
   getTelegramConfig?: () => string;
   getInstalledApps?: () => string;
   saveBackupJson?: (jsonContent: string, fileName: string) => void;
+  syncAppRules?: (rulesJson: string) => void;
   getAppVersionName?: () => string;
   openExternalUrl?: (url: string) => void;
+  openAppSettings?: () => void;
 }
 
 declare global {

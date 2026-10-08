@@ -16,6 +16,14 @@ class SmsBroadcastReceiver : BroadcastReceiver() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                val prefs = context.getSharedPreferences("forwarder_service_prefs", Context.MODE_PRIVATE)
+                val serviceRunning = prefs.getBoolean("key_service_running", false)
+                val smsEnabled = prefs.getBoolean("key_sms_enabled", true)
+                if (!serviceRunning || !smsEnabled) {
+                    pendingResult.finish()
+                    return@launch
+                }
+
                 TelegramSender.ensureConfigLoaded(context)
                 val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
                 val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager

@@ -2,7 +2,6 @@ import React from 'react';
 import { Menu, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
 import { ForwardingSettings } from '../types';
 import { Language, translations } from '../utils/i18n';
-import { getInstalledVersion } from '../utils/version';
 
 export type ActiveTab = 'dashboard' | 'filters' | 'telegram' | 'templates' | 'logs' | 'settings';
 
@@ -14,6 +13,8 @@ interface HeaderProps {
   settings: ForwardingSettings;
   lang: Language;
   onOpenUpdateModal?: () => void;
+  hasUpdate?: boolean;
+  updateVersion?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -24,6 +25,8 @@ export const Header: React.FC<HeaderProps> = ({
   settings,
   lang,
   onOpenUpdateModal,
+  hasUpdate,
+  updateVersion,
 }) => {
   const t = translations[lang];
 
@@ -64,16 +67,16 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Right: Clean status indicator + Version / Update check */}
+        {/* Right: Clean status indicator + Update notice ONLY if there is a new update */}
         <div className="flex items-center gap-2.5 sm:gap-3 text-xs">
-          {onOpenUpdateModal && (
+          {hasUpdate && onOpenUpdateModal && (
             <button
               onClick={onOpenUpdateModal}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/80 hover:border-sky-500/50 dark:hover:border-sky-500/50 text-slate-700 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 font-semibold text-[11px] sm:text-xs transition-all cursor-pointer active:scale-95 shadow-sm"
-              title={lang === 'ru' ? 'Проверить обновления PushToWeb' : 'Check for updates'}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 font-semibold text-[11px] sm:text-xs transition-all cursor-pointer active:scale-95 shadow-sm shadow-emerald-500/10 animate-pulse"
+              title={lang === 'ru' ? `Доступно обновление v${updateVersion || ''}` : `Update v${updateVersion || ''} available`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-              <span>v{getInstalledVersion()}</span>
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>{lang === 'ru' ? `Обновление v${updateVersion}` : `Update v${updateVersion}`}</span>
             </button>
           )}
 

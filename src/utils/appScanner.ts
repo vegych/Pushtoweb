@@ -85,13 +85,13 @@ export function syncDeviceApps(
 
     const devicePackageSet = new Set(rawApps.map((a) => a.packageName));
 
-    // Remove predefined apps that are NOT installed on this device (except system SMS and manual custom apps)
+    // Keep only apps that are present on the device (or custom manual apps added by user)
     let purgedCount = 0;
     let filteredRules = existingRules;
 
     if (purgeUninstalled) {
       filteredRules = existingRules.filter((r) => {
-        if (r.category === 'sms' || r.isCustom) return true;
+        if (r.isCustom) return true;
         const isInstalled = devicePackageSet.has(r.packageName);
         if (!isInstalled) purgedCount++;
         return isInstalled;
@@ -112,7 +112,7 @@ export function syncDeviceApps(
           name: app.appName || app.packageName,
           packageName: app.packageName,
           category,
-          enabled: category === 'sms', // Only SMS apps enabled by default, all push notifications disabled by default
+          enabled: false, // Disabled by default, user explicitly enables in filters
           filterMode: 'all',
           keywords: [],
           excludeKeywords: [],

@@ -20,6 +20,7 @@ import {
 } from './services/storage';
 import { syncDeviceApps } from './utils/appScanner';
 import { sendTelegramMessage } from './services/telegram';
+import { checkAppUpdate, VersionInfo } from './utils/version';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 
 export default function App() {
@@ -31,6 +32,16 @@ export default function App() {
   const [isTesting, setIsTesting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; id: number } | null>(null);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<VersionInfo | null>(null);
+
+  // Background check for newer app version
+  useEffect(() => {
+    checkAppUpdate()
+      .then((info) => {
+        setUpdateInfo(info);
+      })
+      .catch(() => {});
+  }, []);
 
   // Automatic language state with system detection
   const [langMode, setLangMode] = useState<LanguageMode>(() => {
@@ -150,6 +161,15 @@ export default function App() {
             }));
           }
         }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    // Initial sync of filter rules to Android Native Bridge
+    if (typeof window !== 'undefined' && window.AndroidBridge?.syncAppRules) {
+      try {
+        window.AndroidBridge.syncAppRules(JSON.stringify(rules));
       } catch (e) {
         // ignore
       }
@@ -316,6 +336,9 @@ export default function App() {
         isTesting={isTesting}
         onShowToast={showToast}
         lang={lang}
+        onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
+        hasUpdate={Boolean(updateInfo?.hasUpdate)}
+        updateVersion={updateInfo?.latestVersion}
       />
 
       {/* Top Header with Hamburger menu button & Status indicator */}
@@ -327,6 +350,8 @@ export default function App() {
         settings={settings}
         lang={lang}
         onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
+        hasUpdate={Boolean(updateInfo?.hasUpdate)}
+        updateVersion={updateInfo?.latestVersion}
       />
 
       {/* Main Content Body */}

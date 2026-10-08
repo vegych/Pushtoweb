@@ -10,7 +10,13 @@ export function loadSettings(): ForwardingSettings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { ...DEFAULT_SETTINGS, ...parsed };
+      return { 
+        ...DEFAULT_SETTINGS, 
+        ...parsed,
+        // If user never had explicit setting or both were previously false by default, default to true
+        forwardSmsEnabled: parsed.forwardSmsEnabled !== undefined ? parsed.forwardSmsEnabled : true,
+        forwardPushEnabled: parsed.forwardPushEnabled !== undefined ? parsed.forwardPushEnabled : true,
+      };
     }
   } catch (e) {
     console.error('Failed to load settings from localStorage', e);
@@ -34,41 +40,14 @@ export function saveSettings(settings: ForwardingSettings): void {
   }
 }
 
-const DEFAULT_INITIAL_RULES: AppFilterRule[] = [
-  {
-    id: 'sms_google',
-    name: 'Google Сообщения (SMS)',
-    packageName: 'com.google.android.apps.messaging',
-    category: 'sms',
-    enabled: true,
-    filterMode: 'all',
-    keywords: [],
-    excludeKeywords: ['займы', 'микрозайм', 'казино'],
-    extractOtp: true,
-    silent: false,
-    installedOnDevice: true,
-  },
-  {
-    id: 'sms_default',
-    name: 'Стандартные SMS (MMS)',
-    packageName: 'com.android.mms',
-    category: 'sms',
-    enabled: true,
-    filterMode: 'all',
-    keywords: [],
-    excludeKeywords: ['займы', 'казино'],
-    extractOtp: true,
-    silent: false,
-    installedOnDevice: true,
-  },
-];
+const DEFAULT_INITIAL_RULES: AppFilterRule[] = [];
 
 export function loadRules(): AppFilterRule[] {
   try {
     const raw = localStorage.getItem(RULES_KEY);
     if (raw) {
       const saved: AppFilterRule[] = JSON.parse(raw);
-      if (Array.isArray(saved) && saved.length > 0) {
+      if (Array.isArray(saved)) {
         return saved;
       }
     }
@@ -81,6 +60,14 @@ export function loadRules(): AppFilterRule[] {
 export function saveRules(rules: AppFilterRule[]): void {
   try {
     localStorage.setItem(RULES_KEY, JSON.stringify(rules));
+    // Sync to Android Native Bridge if running inside APK
+    if (typeof window !== 'undefined' && window.AndroidBridge?.syncAppRules) {
+      try {
+        window.AndroidBridge.syncAppRules(JSON.stringify(rules));
+      } catch (e) {
+        console.error('Failed to sync rules to AndroidBridge', e);
+      }
+    }
     // Also sync to backend API if available
     fetch('/api/rules', {
       method: 'POST',

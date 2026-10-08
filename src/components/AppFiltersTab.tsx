@@ -451,7 +451,27 @@ export const AppFiltersTab: React.FC<AppFiltersTabProps> = ({
           );
         })}
 
-        {filteredRules.length === 0 && (
+        {rules.length === 0 ? (
+          <div className="py-12 text-center p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+            <Smartphone className="w-10 h-10 text-sky-400 mx-auto" />
+            <div className="text-slate-200 font-semibold text-sm">
+              Список приложений пуст
+            </div>
+            <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+              Приложения определяются автоматически только с вашего Android-устройства и только если у них включены уведомления. Нажмите «Сканировать устройство», чтобы загрузить приложения с телефона.
+            </p>
+            <div className="pt-2 flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={handleScanDeviceApps}
+                className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-xs font-semibold text-white transition-colors flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Сканировать устройство</span>
+              </button>
+            </div>
+          </div>
+        ) : filteredRules.length === 0 && (
           <div className="py-12 text-center p-8 rounded-2xl bg-slate-900 border border-slate-800">
             <Info className="w-8 h-8 text-slate-500 mx-auto mb-2" />
             <div className="text-slate-300 font-semibold text-sm">

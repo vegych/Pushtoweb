@@ -10,11 +10,13 @@ import {
   MessageSquareText,
   Copy, 
   Check, 
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Sparkles
 } from 'lucide-react';
 import { ActiveTab } from './Header';
 import { ForwardingSettings, AppFilterRule } from '../types';
 import { Language, translations } from '../utils/i18n';
+import { getInstalledVersion } from '../utils/version';
 
 interface SidebarDrawerProps {
   isOpen: boolean;
@@ -28,6 +30,9 @@ interface SidebarDrawerProps {
   isTesting: boolean;
   onShowToast: (msg: string, type?: 'success' | 'error') => void;
   lang: Language;
+  onOpenUpdateModal?: () => void;
+  hasUpdate?: boolean;
+  updateVersion?: string;
 }
 
 export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
@@ -42,6 +47,9 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
   isTesting,
   onShowToast,
   lang,
+  onOpenUpdateModal,
+  hasUpdate,
+  updateVersion,
 }) => {
   const t = translations[lang];
   const [copiedUrl, setCopiedUrl] = React.useState(false);
@@ -246,6 +254,38 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             <Send className="w-3.5 h-3.5" />
             <span>{isTesting ? t.testing : t.quickTest}</span>
           </button>
+
+          {/* App Version display under test button */}
+          <div className="pt-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span>{lang === 'ru' ? 'Версия' : 'Version'}:</span>
+              <span className="font-mono text-slate-700 dark:text-slate-300 font-semibold">
+                v{getInstalledVersion()}
+              </span>
+            </span>
+
+            {onOpenUpdateModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenUpdateModal();
+                }}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold transition-colors cursor-pointer ${
+                  hasUpdate
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 animate-pulse'
+                    : 'text-sky-500 hover:text-sky-400 hover:underline'
+                }`}
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>
+                  {hasUpdate
+                    ? (lang === 'ru' ? `Обновить до v${updateVersion}` : `Update to v${updateVersion}`)
+                    : (lang === 'ru' ? 'Проверить' : 'Check')}
+                </span>
+              </button>
+            )}
+          </div>
         </div>
       </aside>
     </>
