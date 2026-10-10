@@ -55,6 +55,11 @@ android {
 
         versionCode = (project.findProperty("versionCode") as? String)?.toIntOrNull() ?: calculatedCode
         versionName = parsedVersionName
+        buildConfigField("String", "APP_VERSION_NAME", "\"${parsedVersionName}\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     signingConfigs {

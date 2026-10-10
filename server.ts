@@ -696,6 +696,7 @@ object Config {
     var TELEGRAM_BOT_TOKEN = "${botToken}"
     var TELEGRAM_CHAT_ID = "${chatId}"
     var TELEGRAM_API_ENDPOINT = "${apiEndpoint}"
+    var APP_VERSION_NAME = "1.1.21"
 }
 `.trim());
 

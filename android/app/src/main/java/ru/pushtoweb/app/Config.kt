@@ -7,4 +7,5 @@ object Config {
     var TELEGRAM_BOT_TOKEN = ""
     var TELEGRAM_CHAT_ID = ""
     var TELEGRAM_API_ENDPOINT = "https://api.telegram.org"
+    var APP_VERSION_NAME = "1.1.21"
 }
