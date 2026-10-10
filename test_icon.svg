@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Discord Blurple Gradient -->
+    <linearGradient id="bgGrad" x1="10%" y1="10%" x2="90%" y2="90%">
+      <stop offset="0%" stop-color="#6473F8" />
+      <stop offset="50%" stop-color="#5865F2" />
+      <stop offset="100%" stop-color="#4752C4" />
+    </linearGradient>
+
+    <!-- Top Soft Ambient Highlight -->
+    <radialGradient id="topGlow" cx="50%" cy="15%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Drop Shadow for the Envelope -->
+    <filter id="envelopeShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#1E1B4B" flood-opacity="0.38" />
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#1E1B4B" flood-opacity="0.2" />
+    </filter>
+
+    <!-- Flap Drop Shadow -->
+    <filter id="flapShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#312E81" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Squircle Base with Soft Tactile Lighting -->
+  <rect x="36" y="36" width="440" height="440" rx="108" fill="url(#bgGrad)" />
+  <rect x="36" y="36" width="440" height="440" rx="108" fill="url(#topGlow)" />
+  <!-- Crisp inner border highlight -->
+  <rect x="37" y="37" width="438" height="438" rx="107" fill="none" stroke="white" stroke-width="2" stroke-opacity="0.18" />
+
+  <!-- White Mail Envelope (Значок письма) -->
+  <g filter="url(#envelopeShadow)">
+    <!-- Envelope Main Body -->
+    <rect x="110" y="162" width="292" height="196" rx="28" fill="#FFFFFF" />
+
+    <!-- Bottom fold diagonals -->
+    <path d="M 118 344 L 218 262" fill="none" stroke="#5865F2" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.85" />
+    <path d="M 394 344 L 294 262" fill="none" stroke="#5865F2" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.85" />
+
+    <!-- Flap Top Fold (V-Shape) with subtle shadow & crisp fold stroke -->
+    <path d="M 116 172 L 250 268 C 253.5 270.5 258.5 270.5 262 268 L 396 172"
+          fill="none"
+          stroke="#5865F2"
+          stroke-width="14"
+          stroke-linecap="round"
+          stroke-linejoin="round" />
+  </g>
+</svg>

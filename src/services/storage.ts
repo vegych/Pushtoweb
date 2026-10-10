@@ -16,6 +16,7 @@ export function loadSettings(): ForwardingSettings {
         // If user never had explicit setting or both were previously false by default, default to true
         forwardSmsEnabled: parsed.forwardSmsEnabled !== undefined ? parsed.forwardSmsEnabled : true,
         forwardPushEnabled: parsed.forwardPushEnabled !== undefined ? parsed.forwardPushEnabled : true,
+        ignoreOngoing: parsed.ignoreOngoing !== undefined ? parsed.ignoreOngoing : true,
       };
     }
   } catch (e) {

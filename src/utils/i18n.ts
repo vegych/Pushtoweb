@@ -14,7 +14,7 @@ export function detectSystemLanguage(): Language {
 
 export function detectSystemTheme(): Theme {
   if (typeof window === 'undefined') return 'dark';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
 }
 
 export const translations = {
@@ -86,6 +86,11 @@ export const translations = {
     webhookTitle: 'Webhook URL для внешних устройств',
     saveSettings: 'Сохранить настройки',
     settingsSaved: 'Настройки сохранены',
+    botAutoSetupTitle: 'Аватарка Telegram бота',
+    botAutoSetupDesc: 'Установка официальной аватарки бота',
+    botAutoSetupBtn: 'Установить аватарку бота',
+    botAutoSetupRunning: 'Установка...',
+    botAutoSetupSuccess: 'Аватарка бота успешно установлена!',
 
     // Templates Tab
     templatesTitle: 'Конструктор оформления сообщений',
@@ -228,6 +233,11 @@ export const translations = {
     webhookTitle: 'Webhook URL for external devices',
     saveSettings: 'Save Settings',
     settingsSaved: 'Settings saved successfully',
+    botAutoSetupTitle: 'Telegram Bot Avatar',
+    botAutoSetupDesc: 'Set official bot profile avatar image',
+    botAutoSetupBtn: 'Set Bot Avatar',
+    botAutoSetupRunning: 'Setting up...',
+    botAutoSetupSuccess: 'Bot avatar updated successfully!',
 
     // Templates Tab
     templatesTitle: 'Message Format Designer',

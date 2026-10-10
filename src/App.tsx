@@ -67,7 +67,7 @@ export default function App() {
     return () => window.removeEventListener('languagechange', handleLangChange);
   }, []);
 
-  // Automatic theme state with system detection
+  // Theme state defaulting to dark
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('pushtoweb_theme_mode') as ThemeMode | null;
@@ -75,7 +75,7 @@ export default function App() {
       const legacy = localStorage.getItem('pushtoweb_theme') as ThemeMode | null;
       if (legacy === 'dark' || legacy === 'light') return legacy;
     }
-    return 'auto';
+    return 'dark';
   });
 
   const [systemTheme, setSystemTheme] = useState<Theme>(detectSystemTheme);

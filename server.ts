@@ -6,7 +6,8 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { PREDEFINED_APPS, DEFAULT_SETTINGS } from './src/data/predefinedApps.js';
 import { evaluateMessage } from './src/utils/filterEngine.js';
-import { sendTelegramMessage, testBotToken, detectRecentChat } from './src/services/telegram.js';
+import { sendTelegramMessage, testBotToken, detectRecentChat, setBotMetadata, setBotProfilePhoto } from './src/services/telegram.js';
+import { execSync } from 'child_process';
 import { ForwardedMessageLog, ForwardingSettings, AppFilterRule, IncomingMessagePayload } from './src/types/index.js';
 
 dotenv.config();
@@ -24,9 +25,9 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
-  // JSON and URL-encoded body parser
-  app.use(express.json({ limit: '5mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+  // JSON and URL-encoded body parser with generous limit for custom avatar uploads
+  app.use(express.json({ limit: '15mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
   // CORS for external device webhooks
   app.use((req, res, next) => {
@@ -55,10 +56,10 @@ async function startServer() {
   // App version check
   app.get('/api/version', (req, res) => {
     res.json({
-      version: '1.0.12',
-      latestVersion: '1.0.12',
+      version: '1.1.21',
+      latestVersion: '1.1.21',
       downloadUrl: 'https://github.com/vegych/PushToWeb/releases/latest',
-      releaseNotes: 'Улучшена обработка обновляющихся уведомлений, раздельная пересылка сообщений, централизованные настройки и встроенная система автообновлений.',
+      releaseNotes: '• Встроенное скачивание и установка обновлений APK прямо из приложения без перехода в браузер (с тихой очисткой временных файлов)\n• Обновленная лаконичная полоса прогресса скачивания в стиле 3x manager\n• Обновленные иконки и аватарка бота без белых полей, аккуратно отцентрированные на фиолетовом фоне\n• Чистая настройка оформления бота Telegram с предустановкой аватарки и шапки без лишнего приветственного описания',
     });
   });
 
@@ -162,6 +163,181 @@ async function startServer() {
     const endpoint = (req.query.apiEndpoint as string) || serverSettings.telegramApiEndpoint || 'https://api.telegram.org';
     const detectRes = await detectRecentChat(token, endpoint);
     res.json(detectRes);
+  });
+
+  // Provide bot avatar JPEG image file
+  app.get('/api/telegram/bot-avatar', (req, res) => {
+    const avatarPath = path.join(__dirname, 'public', 'bot-avatar.jpg');
+    if (fs.existsSync(avatarPath)) {
+      res.setHeader('Content-Type', 'image/jpeg');
+      fs.createReadStream(avatarPath).pipe(res);
+    } else {
+      res.status(404).json({ error: 'Avatar not found' });
+    }
+  });
+
+  // Setup bot profile: avatar photo
+  app.post('/api/telegram/setup-bot', async (req, res) => {
+    const token = req.body.token || serverSettings.telegramBotToken;
+    const endpoint = req.body.apiEndpoint || serverSettings.telegramApiEndpoint || 'https://api.telegram.org';
+
+    if (!token) {
+      res.status(400).json({ success: false, error: 'Токен бота не указан' });
+      return;
+    }
+
+    // 1. Verify token
+    const tokenRes = await testBotToken(token, endpoint);
+    if (!tokenRes.success) {
+      res.status(400).json({ success: false, error: tokenRes.error });
+      return;
+    }
+
+    const report: {
+      avatar?: boolean;
+      description?: boolean;
+      shortDescription?: boolean;
+      errors: string[];
+    } = { errors: [] };
+
+    // 2. Set default descriptions:
+    // User request: No welcome description (clear it), only bot header (short_description) and avatar:
+    // Шапка: 🔔 Пересылка SMS, кодов подтверждения и пуш-уведомлений Android
+    const defaultShortDescription = '🔔 Пересылка SMS, кодов подтверждения и пуш-уведомлений Android';
+
+    try {
+      const metaRes = await setBotMetadata(token, {
+        description: '', // Clears welcome screen description
+        shortDescription: defaultShortDescription,
+      }, endpoint);
+      report.description = metaRes.results.description;
+      report.shortDescription = metaRes.results.shortDescription;
+      if (metaRes.error) {
+        report.errors.push(`Шапка бота: ${metaRes.error}`);
+      }
+    } catch (err: any) {
+      report.errors.push(`Шапка бота: ${err.message}`);
+    }
+
+    // 3. Set profile photo (avatar)
+    const avatarPath = path.join(__dirname, 'public', 'bot-avatar.jpg');
+    if (fs.existsSync(avatarPath)) {
+      try {
+        const fileBuffer = fs.readFileSync(avatarPath);
+        const blob = new Blob([fileBuffer], { type: 'image/jpeg' });
+        const photoRes = await setBotProfilePhoto(token, blob, endpoint);
+        report.avatar = photoRes.success;
+        if (!photoRes.success && photoRes.error) {
+          report.errors.push(`Аватарка: ${photoRes.error}`);
+        }
+      } catch (err: any) {
+        report.avatar = false;
+        report.errors.push(`Аватарка: ${err.message}`);
+      }
+    } else {
+      report.avatar = false;
+      report.errors.push('Файл аватарки не найден на сервере');
+    }
+
+    const overallSuccess = Boolean(report.avatar || report.description || report.shortDescription);
+    res.json({
+      success: overallSuccess,
+      report,
+      bot: tokenRes.bot,
+    });
+  });
+
+  /**
+   * Upload custom avatar / app icon
+   * Allows the user to upload any generated picture or photo directly
+   */
+  app.post('/api/avatar/upload', async (req, res) => {
+    try {
+      const { image } = req.body;
+      if (!image || typeof image !== 'string') {
+        res.status(400).json({ success: false, error: 'Изображение не передано (Image data missing)' });
+        return;
+      }
+
+      // Extract base64
+      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      let buffer: Buffer;
+      if (matches && matches.length === 3) {
+        buffer = Buffer.from(matches[2], 'base64');
+      } else {
+        buffer = Buffer.from(image, 'base64');
+      }
+
+      const tempUploadPath = '/tmp/custom_avatar_upload.png';
+      fs.writeFileSync(tempUploadPath, buffer);
+
+      const publicDir = path.join(__dirname, 'public');
+      const distDir = path.join(__dirname, 'dist');
+      const androidDir = path.join(__dirname, 'android', 'app', 'src', 'main');
+
+      // 1. High quality 640x640 JPEG for Telegram avatar
+      execSync(`ffmpeg -y -i "${tempUploadPath}" -vf "scale=640:640:force_original_aspect_ratio=decrease,pad=640:640:(ow-iw)/2:(oh-ih)/2" -q:v 2 "${path.join(publicDir, 'bot-avatar.jpg')}"`);
+
+      // 2. 512x512 PNG for PWA icon
+      execSync(`ffmpeg -y -i "${tempUploadPath}" -vf "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2" "${path.join(publicDir, 'icon.png')}"`);
+
+      // 3. SVG embedding the PNG
+      const b64 = fs.readFileSync(path.join(publicDir, 'icon.png')).toString('base64');
+      const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><image href="data:image/png;base64,${b64}" width="512" height="512"/></svg>`;
+      fs.writeFileSync(path.join(publicDir, 'icon.svg'), svgContent, 'utf-8');
+
+      // 4. Copy to dist if dist exists
+      if (fs.existsSync(distDir)) {
+        fs.copyFileSync(path.join(publicDir, 'bot-avatar.jpg'), path.join(distDir, 'bot-avatar.jpg'));
+        fs.copyFileSync(path.join(publicDir, 'icon.png'), path.join(distDir, 'icon.png'));
+        fs.writeFileSync(path.join(distDir, 'icon.svg'), svgContent, 'utf-8');
+      }
+
+      // 5. Android launcher icons
+      const mipmaps = [
+        { folder: 'mipmap-mdpi', size: 48 },
+        { folder: 'mipmap-hdpi', size: 72 },
+        { folder: 'mipmap-xhdpi', size: 96 },
+        { folder: 'mipmap-xxhdpi', size: 144 },
+        { folder: 'mipmap-xxxhdpi', size: 192 },
+      ];
+
+      for (const m of mipmaps) {
+        const targetPath = path.join(androidDir, 'res', m.folder, 'ic_launcher.png');
+        if (fs.existsSync(path.dirname(targetPath))) {
+          execSync(`ffmpeg -y -i "${tempUploadPath}" -vf "scale=${m.size}:${m.size}:force_original_aspect_ratio=decrease,pad=${m.size}:${m.size}:(ow-iw)/2:(oh-ih)/2" "${targetPath}"`);
+        }
+      }
+
+      const androidWebAvatar = path.join(androidDir, 'assets', 'web', 'bot-avatar.jpg');
+      if (fs.existsSync(path.dirname(androidWebAvatar))) {
+        fs.copyFileSync(path.join(publicDir, 'bot-avatar.jpg'), androidWebAvatar);
+      }
+
+      res.json({ success: true, timestamp: Date.now() });
+    } catch (err: any) {
+      console.error('Avatar upload error:', err);
+      res.status(500).json({ success: false, error: err.message || 'Ошибка обработки изображения' });
+    }
+  });
+
+  /**
+   * Reset avatar back to the generated plush envelope icon
+   */
+  app.post('/api/avatar/reset', async (_req, res) => {
+    try {
+      execSync('node scripts/generate_fluffy_icon.cjs', { cwd: __dirname });
+      const publicDir = path.join(__dirname, 'public');
+      const distDir = path.join(__dirname, 'dist');
+      if (fs.existsSync(distDir)) {
+        fs.copyFileSync(path.join(publicDir, 'bot-avatar.jpg'), path.join(distDir, 'bot-avatar.jpg'));
+        fs.copyFileSync(path.join(publicDir, 'icon.png'), path.join(distDir, 'icon.png'));
+        fs.copyFileSync(path.join(publicDir, 'icon.svg'), path.join(distDir, 'icon.svg'));
+      }
+      res.json({ success: true, timestamp: Date.now() });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message || 'Ошибка сброса иконки' });
+    }
   });
 
   /**
@@ -624,6 +800,9 @@ class NotificationForwarderService : NotificationListenerService() {
 
         // Пропускаем служебные системные уведомления самого приложения
         if (sbn.packageName == packageName) return
+
+        // По умолчанию игнорируем фоновые / постоянные уведомления (плееры, служебные процессы)
+        if (sbn.isOngoing) return
 
         val extras = sbn.notification.extras ?: return
         val title = extras.getString(Notification.EXTRA_TITLE) ?: ""

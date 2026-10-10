@@ -7,7 +7,9 @@ import {
   ExternalLink, 
   CheckCircle2, 
   AlertCircle,
-  PackageCheck
+  PackageCheck,
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import { VersionInfo, checkAppUpdate, getInstalledVersion, GITHUB_RELEASES_URL, getReleaseType, getReleaseTypeBadge } from '../utils/version';
 import { Language } from '../utils/i18n';
@@ -28,8 +30,57 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
 
+  // In-app direct download & installation state
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadPercent, setDownloadPercent] = useState<number>(0);
+  const [downloadBytes, setDownloadBytes] = useState<number>(0);
+  const [downloadStatus, setDownloadStatus] = useState<string>('');
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [installStarted, setInstallStarted] = useState(false);
+
+  const isNative = typeof window !== 'undefined' && Boolean(window.AndroidBridge?.downloadAndInstallApk);
+
+  // Attach native callbacks
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    (window as any).__onApkDownloadProgress = (percent: number, bytes: number, status: string) => {
+      setIsDownloading(true);
+      setDownloadPercent(percent);
+      setDownloadBytes(bytes);
+      if (status) setDownloadStatus(status);
+      setDownloadError(null);
+    };
+
+    (window as any).__onApkDownloadError = (error: string) => {
+      setIsDownloading(false);
+      setDownloadError(error);
+      if (onShowToast) {
+        onShowToast(error || (lang === 'ru' ? 'Ошибка загрузки APK' : 'APK download failed'), 'error');
+      }
+    };
+
+    (window as any).__onApkInstallStarted = () => {
+      setIsDownloading(false);
+      setInstallStarted(true);
+      if (onShowToast) {
+        onShowToast(
+          lang === 'ru' ? 'Запуск установщика обновлений Android...' : 'Launching Android package installer...',
+          'success'
+        );
+      }
+    };
+
+    return () => {
+      delete (window as any).__onApkDownloadProgress;
+      delete (window as any).__onApkDownloadError;
+      delete (window as any).__onApkInstallStarted;
+    };
+  }, [lang, onShowToast]);
+
   const fetchUpdate = async () => {
     setLoading(true);
+    setDownloadError(null);
     try {
       const info = await checkAppUpdate();
       setVersionInfo(info);
@@ -60,11 +111,51 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     }
   };
 
-  const handleDownloadClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleStartInAppUpdate = () => {
+    const apkUrl = versionInfo?.apkDownloadUrl || versionInfo?.downloadUrl;
+    if (!apkUrl) {
+      if (onShowToast) onShowToast(lang === 'ru' ? 'Ссылка на APK не найдена' : 'APK URL not found', 'error');
+      return;
+    }
+
+    if (isNative && window.AndroidBridge?.downloadAndInstallApk) {
+      setIsDownloading(true);
+      setDownloadPercent(0);
+      setDownloadBytes(0);
+      setDownloadError(null);
+      setInstallStarted(false);
+      setDownloadStatus(lang === 'ru' ? 'Подключение к GitHub...' : 'Connecting to GitHub...');
+
+      const fileName = versionInfo?.apkFileName || `PushToWeb-v${versionInfo?.latestVersion || 'latest'}.apk`;
+      window.AndroidBridge.downloadAndInstallApk(apkUrl, fileName);
+    } else {
+      // Browser fallback (Web browser download directly)
+      const link = document.createElement('a');
+      link.href = apkUrl;
+      link.download = versionInfo?.apkFileName || 'PushToWeb.apk';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const handleCancelDownload = () => {
+    if (isNative && window.AndroidBridge?.cancelApkDownload) {
+      window.AndroidBridge.cancelApkDownload();
+    }
+    setIsDownloading(false);
+    setDownloadPercent(0);
+    setDownloadStatus(lang === 'ru' ? 'Загрузка отменена' : 'Download cancelled');
+  };
+
+  const handleOpenExternal = (e: React.MouseEvent) => {
+    e.preventDefault();
     const url = versionInfo?.downloadUrl || GITHUB_RELEASES_URL;
     if (typeof window !== 'undefined' && window.AndroidBridge?.openExternalUrl) {
-      e.preventDefault();
       window.AndroidBridge.openExternalUrl(url);
+    } else {
+      window.open(url, '_blank');
     }
   };
 
@@ -96,7 +187,12 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              if (isDownloading) {
+                handleCancelDownload();
+              }
+              onClose();
+            }}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -157,6 +253,53 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                 </div>
               )}
 
+              {/* In-app download progress panel (Clean progress line style like 3x manager) */}
+              {isDownloading && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-200 flex items-center gap-2">
+                      <RefreshCw className="w-3.5 h-3.5 text-sky-400 animate-spin" />
+                      <span>{lang === 'ru' ? 'Скачивание обновления...' : 'Downloading update...'}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCancelDownload}
+                      className="text-slate-400 hover:text-red-400 text-xs transition-colors cursor-pointer"
+                    >
+                      {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                    </button>
+                  </div>
+
+                  {/* Clean progress bar line */}
+                  <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden relative">
+                    <div 
+                      className="h-full bg-sky-500 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, Math.max(5, downloadPercent))}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Install started banner */}
+              {installStarted && !isDownloading && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>
+                    {lang === 'ru'
+                      ? 'Установщик запущен. После обновления временный файл APK очищается автоматически.'
+                      : 'Installer launched. Downloaded APK will be deleted automatically.'}
+                  </span>
+                </div>
+              )}
+
+              {/* Download error banner */}
+              {downloadError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{downloadError}</span>
+                </div>
+              )}
+
               {/* Versioning Legend Note */}
               <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
                 <span className="font-semibold dark:text-slate-300 text-slate-700 block">
@@ -191,33 +334,41 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex flex-col sm:flex-row items-center justify-between gap-2.5">
           <button
             onClick={fetchUpdate}
-            disabled={loading}
-            className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            disabled={loading || isDownloading}
+            className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-sky-500' : ''}`} />
             <span>{lang === 'ru' ? 'Проверить снова' : 'Check again'}</span>
           </button>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <a
-              href={versionInfo?.downloadUrl || GITHUB_RELEASES_URL}
-              onClick={handleDownloadClick}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold transition-all shadow-md hover:shadow-sky-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+            {/* Direct In-App Download Button (no browser redirect) */}
+            {versionInfo?.hasUpdate ? (
+              <button
+                type="button"
+                onClick={handleStartInAppUpdate}
+                disabled={isDownloading}
+                className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold transition-all shadow-md hover:shadow-sky-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 active:scale-95"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>
+                  {isDownloading
+                    ? (lang === 'ru' ? 'Скачивание...' : 'Downloading...')
+                    : (lang === 'ru' ? 'Скачать и установить' : 'Download & Install')}
+                </span>
+              </button>
+            ) : null}
+
+            {/* GitHub Releases Link */}
+            <button
+              type="button"
+              onClick={handleOpenExternal}
+              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              title={lang === 'ru' ? 'Открыть страницу релизов на GitHub' : 'Open GitHub releases page'}
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>
-                {versionInfo?.hasUpdate
-                  ? lang === 'ru'
-                    ? 'Скачать APK'
-                    : 'Download APK'
-                  : lang === 'ru'
-                  ? 'Перейти к релизам'
-                  : 'GitHub Releases'}
-              </span>
+              <span>GitHub</span>
               <ExternalLink className="w-3 h-3 opacity-70" />
-            </a>
+            </button>
           </div>
         </div>
 

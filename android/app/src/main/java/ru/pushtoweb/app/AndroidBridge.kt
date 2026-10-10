@@ -321,4 +321,26 @@ class AndroidBridge(private val activity: Activity) {
             }
         }
     }
+
+    @JavascriptInterface
+    fun downloadAndInstallApk(apkUrl: String, fileName: String? = null) {
+        val mainActivity = activity as? MainActivity
+        if (mainActivity != null) {
+            mainActivity.downloadAndInstallApk(apkUrl, fileName)
+        } else {
+            openExternalUrl(apkUrl)
+        }
+    }
+
+    @JavascriptInterface
+    fun cancelApkDownload() {
+        val mainActivity = activity as? MainActivity
+        mainActivity?.cancelApkDownload()
+    }
+
+    @JavascriptInterface
+    fun deleteDownloadedApk() {
+        val mainActivity = activity as? MainActivity
+        mainActivity?.cleanDownloadedApkFiles()
+    }
 }

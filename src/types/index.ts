@@ -121,6 +121,10 @@ export interface AndroidNativeBridge {
   getAppVersionName?: () => string;
   openExternalUrl?: (url: string) => void;
   openAppSettings?: () => void;
+  downloadAndInstallApk?: (apkUrl: string, fileName?: string) => void;
+  cancelApkDownload?: () => void;
+  installDownloadedApk?: () => void;
+  deleteDownloadedApk?: () => void;
 }
 
 declare global {

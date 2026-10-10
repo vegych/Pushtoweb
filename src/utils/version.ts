@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.1.19';
+export const CURRENT_VERSION = '1.1.21';
 export const GITHUB_REPO = 'vegych/PushToWeb';
 export const GITHUB_RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases`;
 export const GITHUB_LATEST_RELEASE_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
@@ -55,6 +55,9 @@ export interface VersionInfo {
   latestVersion: string;
   hasUpdate: boolean;
   downloadUrl: string;
+  apkDownloadUrl?: string;
+  apkFileName?: string;
+  apkSize?: number;
   releaseNotes?: string;
   publishedAt?: string;
 }
@@ -69,7 +72,7 @@ export async function checkAppUpdate(): Promise<VersionInfo> {
     if (res.ok) {
       const data = await res.json();
       const latestTag = (data.tag_name || data.name || '').replace(/^v/i, '').trim();
-      const apkAsset = data.assets?.find((a: { name?: string; browser_download_url?: string }) =>
+      const apkAsset = data.assets?.find((a: { name?: string; browser_download_url?: string; size?: number }) =>
         a.name?.endsWith('.apk')
       );
       const downloadUrl = apkAsset?.browser_download_url || data.html_url || GITHUB_RELEASES_URL;
@@ -81,6 +84,9 @@ export async function checkAppUpdate(): Promise<VersionInfo> {
         latestVersion: latestTag || currentVer,
         hasUpdate,
         downloadUrl,
+        apkDownloadUrl: apkAsset?.browser_download_url,
+        apkFileName: apkAsset?.name,
+        apkSize: apkAsset?.size,
         releaseNotes: data.body || 'Новые исправления и улучшения производительности.',
         publishedAt: data.published_at,
       };

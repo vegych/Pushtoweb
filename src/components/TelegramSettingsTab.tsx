@@ -6,20 +6,18 @@ import {
   Check, 
   RefreshCw, 
   ExternalLink, 
-  ShieldCheck, 
-  Sliders, 
   Bell, 
-  Layers, 
   CheckCircle2,
   Globe,
-  Terminal,
-  MessageSquareText,
-  Key,
-  AlertTriangle
+  AlertTriangle,
+  Sparkles,
+  Bot
 } from 'lucide-react';
 import { ForwardingSettings } from '../types';
-import { testBotToken, detectRecentChat, sendTelegramMessage } from '../services/telegram';
+import { testBotToken, detectRecentChat, sendTelegramMessage, setBotMetadata, setBotProfilePhoto } from '../services/telegram';
 import { TelegramMessageBubble } from './TelegramMessageBubble';
+
+const DEFAULT_BOT_HEADER = '🔔 Пересылка SMS, кодов подтверждения и пуш-уведомлений Android';
 
 interface TelegramSettingsTabProps {
   settings: ForwardingSettings;
@@ -42,6 +40,9 @@ export const TelegramSettingsTab: React.FC<TelegramSettingsTabProps> = ({
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [copiedApiUrl, setCopiedApiUrl] = useState(false);
+  const [isSettingUpBot, setIsSettingUpBot] = useState(false);
+  const [botSetupSuccess, setBotSetupSuccess] = useState<string | null>(null);
+  const avatarTimestamp = React.useMemo(() => Date.now(), []);
 
   const webhookUrl = `${window.location.origin}/api/forward?key=${apiKey}`;
   const cleanEndpoint = (apiEndpoint || 'https://api.telegram.org').replace(/\/+$/, '');
@@ -135,6 +136,73 @@ export const TelegramSettingsTab: React.FC<TelegramSettingsTabProps> = ({
     setApiKey(newKey);
     onUpdateSettings({ ...settings, gatewayApiKey: newKey });
     onShowToast('Новый API-ключ шлюза сгенерирован', 'success');
+  };
+
+  const handleSetupBotProfile = async () => {
+    if (!botToken.trim()) {
+      onShowToast('Сначала укажите токен бота', 'error');
+      return;
+    }
+
+    setIsSettingUpBot(true);
+    setBotSetupSuccess(null);
+
+    try {
+      // 1. Try server endpoint first (sets descriptions + avatar)
+      let serverOk = false;
+      try {
+        const res = await fetch('/api/telegram/setup-bot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: botToken.trim(),
+            apiEndpoint: apiEndpoint.trim(),
+          }),
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          serverOk = true;
+          const msg = 'Стандартные описания и аватарка бота успешно применены в Telegram!';
+          setBotSetupSuccess(msg);
+          onShowToast(msg, 'success');
+          return;
+        }
+      } catch (err) {
+        // Fallback to client-side direct calls if server is offline or in APK standalone
+      }
+
+      if (!serverOk) {
+        // 2. Direct client-side calls
+        let metaOk = false;
+        try {
+          const metaRes = await setBotMetadata(botToken, {
+            description: '', // Очистка приветственного описания
+            shortDescription: DEFAULT_BOT_HEADER, // Шапка бота
+          }, apiEndpoint);
+          metaOk = metaRes.success;
+        } catch {}
+
+        let photoOk = false;
+        try {
+          const photoFetch = await fetch('/bot-avatar.jpg');
+          if (photoFetch.ok) {
+            const blob = await photoFetch.blob();
+            const photoRes = await setBotProfilePhoto(botToken, blob, apiEndpoint);
+            photoOk = photoRes.success;
+          }
+        } catch {}
+
+        if (photoOk || metaOk) {
+          const summary = 'Шапка и аватарка бота успешно применены!';
+          setBotSetupSuccess(summary);
+          onShowToast(summary, 'success');
+        } else {
+          onShowToast('Не удалось обновить профиль бота. Проверьте токен бота.', 'error');
+        }
+      }
+    } finally {
+      setIsSettingUpBot(false);
+    }
   };
 
   const handleCopyWebhook = () => {
@@ -319,6 +387,86 @@ export const TelegramSettingsTab: React.FC<TelegramSettingsTabProps> = ({
             </div>
           </div>
 
+          {/* SECTION: АВАТАРКА И ШАПКА БОТА */}
+          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-lg shadow-sky-950/5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm">Оформление бота в Telegram</h3>
+                  <p className="text-[11px] text-slate-400">
+                    Установка официальной аватарки и шапки бота
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {/* 1. Avatar info */}
+              <div className="flex items-center gap-3.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                <img
+                  src={`/bot-avatar.jpg?v=${avatarTimestamp}`}
+                  alt="Default Bot Avatar"
+                  className="w-12 h-12 rounded-full ring-2 ring-sky-500/30 object-cover shadow-md shrink-0"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/icon.png';
+                  }}
+                />
+                <div className="text-xs space-y-0.5">
+                  <div className="font-semibold text-slate-200">
+                    Аватарка бота
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Фирменный значок PushToWeb
+                  </p>
+                </div>
+              </div>
+
+              {/* 2. Bot Header */}
+              <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5 text-xs">
+                <span className="font-semibold text-slate-200">
+                  Шапка бота
+                </span>
+                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-sky-300 font-medium select-all">
+                  {DEFAULT_BOT_HEADER}
+                </div>
+              </div>
+            </div>
+
+            {botSetupSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{botSetupSuccess}</span>
+              </div>
+            )}
+
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-800">
+              <span className="text-[11px] text-slate-400">
+                Применение параметров через Telegram Bot API:
+              </span>
+              <button
+                type="button"
+                onClick={handleSetupBotProfile}
+                disabled={isSettingUpBot || !botToken.trim()}
+                className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-sky-950/20 whitespace-nowrap self-stretch sm:self-auto"
+              >
+                {isSettingUpBot ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Установка в Telegram...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Установить по умолчанию</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
           {/* Webhook & Gateway API Key */}
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
             <h3 className="font-semibold text-white text-base">Шлюз для смартфона (Webhook URL)</h3>
@@ -381,25 +529,6 @@ export const TelegramSettingsTab: React.FC<TelegramSettingsTabProps> = ({
                   checked={settings.maskSensitiveDigits}
                   onChange={(e) =>
                     onUpdateSettings({ ...settings, maskSensitiveDigits: e.target.checked })
-                  }
-                  className="rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-sky-500 w-4 h-4 cursor-pointer"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded-xl bg-slate-800/40 border border-slate-800 cursor-pointer">
-                <div>
-                  <div className="font-semibold text-slate-200">
-                    Игнорировать фоновые уведомления (isOngoing)
-                  </div>
-                  <div className="text-slate-400 text-[11px]">
-                    Плееры, загрузки файлов и служебные процессы Android
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.ignoreOngoing}
-                  onChange={(e) =>
-                    onUpdateSettings({ ...settings, ignoreOngoing: e.target.checked })
                   }
                   className="rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-sky-500 w-4 h-4 cursor-pointer"
                 />

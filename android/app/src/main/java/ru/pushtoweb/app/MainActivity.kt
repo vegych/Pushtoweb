@@ -28,126 +28,225 @@ class MainActivity : AppCompatActivity() {
     private var pendingBackupJson: String? = null
     private var pendingFileName: String? = null
 
+    private var downloadThread: Thread? = null
+    private var pendingApkFile: java.io.File? = null
+
     companion object {
         private const val REQUEST_CODE_CREATE_FILE = 2001
+        private const val REQUEST_CODE_INSTALL_PERM = 2002
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onDestroy() {
+        super.onDestroy()
+        downloadThread?.interrupt()
+    }
 
-        // Load saved Telegram credentials into Config object
-        loadSavedConfig()
+    fun cleanDownloadedApkFiles() {
+        try {
+            val updateDir = java.io.File(getExternalFilesDir(null), "updates")
+            if (updateDir.exists()) {
+                val files = updateDir.listFiles()
+                files?.forEach { f ->
+                    if (f.name.endsWith(".apk")) {
+                        val deleted = f.delete()
+                        Log.d("PushToWeb", "Cleanup old update APK ${f.name}: $deleted")
+                    }
+                }
+            }
+            pendingApkFile = null
+        } catch (e: Exception) {
+            Log.e("PushToWeb", "Failed to clean old update APKs", e)
+        }
+    }
 
-        // Start service only if explicitly enabled by user previously
-        val fgPrefs = getSharedPreferences("forwarder_service_prefs", Context.MODE_PRIVATE)
-        if (fgPrefs.getBoolean("key_service_running", false)) {
-            ForwarderForegroundService.start(this)
+    fun downloadAndInstallApk(apkUrl: String, customFileName: String?) {
+        downloadThread?.interrupt()
+
+        val fileName = if (!customFileName.isNullOrEmpty() && customFileName.endsWith(".apk")) {
+            customFileName
+        } else {
+            "PushToWeb-update.apk"
         }
 
-        val assetLoader = WebViewAssetLoader.Builder()
-            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
-            .build()
+        downloadThread = Thread {
+            var input: java.io.InputStream? = null
+            var output: java.io.FileOutputStream? = null
+            var connection: java.net.HttpURLConnection? = null
+            var downloadedFile: java.io.File? = null
 
-        webView = WebView(this).apply {
-            settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                databaseEnabled = true
-                allowFileAccess = true
-                allowContentAccess = true
-                allowFileAccessFromFileURLs = true
-                allowUniversalAccessFromFileURLs = true
-                cacheMode = WebSettings.LOAD_DEFAULT
-                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            }
-            webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(
-                    view: WebView?,
-                    request: WebResourceRequest?
-                ): Boolean {
-                    val url = request?.url?.toString() ?: return false
-                    if (url.startsWith("http://") || url.startsWith("https://")) {
-                        if (!url.contains("app.assets")) {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                startActivity(intent)
-                                return true
-                            } catch (e: Exception) {
-                                Log.e("PushToWeb", "Failed to open url: $url", e)
-                            }
+            try {
+                notifyDownloadProgress(0, 0, "Подключение к серверу...")
+
+                val updateDir = java.io.File(getExternalFilesDir(null), "updates")
+                if (!updateDir.exists()) {
+                    updateDir.mkdirs()
+                }
+
+                // Delete any old APK files first to save storage
+                updateDir.listFiles()?.forEach { if (it.name.endsWith(".apk")) it.delete() }
+
+                downloadedFile = java.io.File(updateDir, fileName)
+                pendingApkFile = downloadedFile
+
+                // Follow redirects (GitHub releases redirect to AWS S3/objects)
+                var currentUrl = apkUrl
+                var redirects = 0
+                while (redirects < 5) {
+                    val urlObj = java.net.URL(currentUrl)
+                    connection = (urlObj.openConnection() as java.net.HttpURLConnection).apply {
+                        instanceFollowRedirects = false
+                        connectTimeout = 15000
+                        readTimeout = 30000
+                        setRequestProperty("User-Agent", "PushToWeb-Android/${Config.APP_VERSION_NAME}")
+                    }
+                    val code = connection.responseCode
+                    if (code == java.net.HttpURLConnection.HTTP_MOVED_PERM ||
+                        code == java.net.HttpURLConnection.HTTP_MOVED_TEMP ||
+                        code == java.net.HttpURLConnection.HTTP_SEE_OTHER ||
+                        code == 307 || code == 308) {
+                        val newLocation = connection.getHeaderField("Location")
+                        if (!newLocation.isNullOrEmpty()) {
+                            currentUrl = newLocation
+                            redirects++
+                            continue
                         }
                     }
-                    return false
+                    break
                 }
 
-                override fun shouldInterceptRequest(
-                    view: WebView?,
-                    request: WebResourceRequest?
-                ): WebResourceResponse? {
-                    val uri = request?.url ?: return null
-                    return assetLoader.shouldInterceptRequest(uri)
+                if (connection?.responseCode != java.net.HttpURLConnection.HTTP_OK) {
+                    throw Exception("HTTP ошибка сервера: ${connection?.responseCode} ${connection?.responseMessage}")
                 }
-            }
-            setDownloadListener { url, _, _, _, _ ->
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+                val fileLength = connection.contentLength
+                input = connection.inputStream
+                output = java.io.FileOutputStream(downloadedFile)
+
+                val data = ByteArray(8192)
+                var total: Long = 0
+                var count: Int
+                var lastProgressUpdate = 0L
+
+                while (input.read(data).also { count = it } != -1) {
+                    if (Thread.currentThread().isInterrupted) {
+                        downloadedFile.delete()
+                        notifyDownloadFailed("Загрузка отменена")
+                        return@Thread
                     }
-                    startActivity(intent)
+                    total += count.toLong()
+                    output.write(data, 0, count)
+
+                    val now = System.currentTimeMillis()
+                    if (fileLength > 0 && (now - lastProgressUpdate > 150 || total == fileLength.toLong())) {
+                        lastProgressUpdate = now
+                        val percent = ((total * 100) / fileLength).toInt()
+                        notifyDownloadProgress(percent, total, "")
+                    }
+                }
+
+                output.flush()
+                notifyDownloadProgress(100, total, "Загрузка завершена")
+
+                // Launch package installer
+                runOnUiThread {
+                    installApk(downloadedFile)
+                }
+
+            } catch (e: Exception) {
+                if (Thread.currentThread().isInterrupted) {
+                    downloadedFile?.delete()
+                    notifyDownloadFailed("Загрузка отменена")
+                } else {
+                    Log.e("PushToWeb", "Error downloading APK: ${e.message}", e)
+                    downloadedFile?.delete()
+                    notifyDownloadFailed(e.message ?: "Ошибка загрузки APK")
+                }
+            } finally {
+                try { input?.close() } catch (ignored: Exception) {}
+                try { output?.close() } catch (ignored: Exception) {}
+                connection?.disconnect()
+            }
+        }.apply { start() }
+    }
+
+    fun cancelApkDownload() {
+        downloadThread?.interrupt()
+        downloadThread = null
+        cleanDownloadedApkFiles()
+    }
+
+    private fun notifyDownloadProgress(percent: Int, bytesDownloaded: Long, status: String) {
+        runOnUiThread {
+            val safeStatus = status.replace("'", "\\'")
+            webView.evaluateJavascript(
+                "if (window.__onApkDownloadProgress) window.__onApkDownloadProgress($percent, $bytesDownloaded, '$safeStatus');",
+                null
+            )
+        }
+    }
+
+    private fun notifyDownloadFailed(error: String) {
+        runOnUiThread {
+            val safeErr = error.replace("'", "\\'").replace("\n", " ")
+            webView.evaluateJavascript(
+                "if (window.__onApkDownloadError) window.__onApkDownloadError('$safeErr');",
+                null
+            )
+            Toast.makeText(this, "Ошибка скачивания: $error", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun installApk(apkFile: java.io.File) {
+        if (!apkFile.exists()) {
+            Toast.makeText(this, "Файл APK не найден", Toast.LENGTH_SHORT).show()
+            return
+        }
+        pendingApkFile = apkFile
+
+        // Check Unknown sources permission on Android 8.0+ (Oreo+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!packageManager.canRequestPackageInstalls()) {
+                try {
+                    val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                    startActivityForResult(intent, REQUEST_CODE_INSTALL_PERM)
+                    Toast.makeText(this, "Разрешите установку обновлений для приложения", Toast.LENGTH_LONG).show()
+                    return
                 } catch (e: Exception) {
-                    Toast.makeText(this@MainActivity, "Ошибка открытия загрузки: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Log.e("PushToWeb", "Failed to open unknown app sources settings", e)
                 }
             }
-            webChromeClient = object : WebChromeClient() {
-                override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
-                    Log.d("PushToWebJS", "${consoleMessage?.message()} -- From line ${consoleMessage?.lineNumber()} of ${consoleMessage?.sourceId()}")
-                    return true
-                }
+        }
+
+        try {
+            val apkUri = androidx.core.content.FileProvider.getUriForFile(
+                this,
+                "$packageName.fileprovider",
+                apkFile
+            )
+
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            addJavascriptInterface(AndroidBridge(this@MainActivity), "AndroidBridge")
-        }
+            startActivity(intent)
 
-        setContentView(webView)
-
-        // Load via secure asset loader (supports ES modules and local storage)
-        webView.loadUrl(Config.APP_WEB_URL)
-    }
-
-    private fun loadSavedConfig() {
-        val prefs = getSharedPreferences("pushtoweb_config", Context.MODE_PRIVATE)
-        Config.TELEGRAM_BOT_TOKEN = prefs.getString("bot_token", Config.TELEGRAM_BOT_TOKEN) ?: Config.TELEGRAM_BOT_TOKEN
-        Config.TELEGRAM_CHAT_ID = prefs.getString("chat_id", Config.TELEGRAM_CHAT_ID) ?: Config.TELEGRAM_CHAT_ID
-        Config.TELEGRAM_API_ENDPOINT = prefs.getString("api_endpoint", Config.TELEGRAM_API_ENDPOINT) ?: Config.TELEGRAM_API_ENDPOINT
-        Config.WEBHOOK_URL = prefs.getString("webhook_url", Config.WEBHOOK_URL) ?: Config.WEBHOOK_URL
-    }
-
-    private fun requestStartupPermissions() {
-        val needed = mutableListOf<String>()
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
-            needed.add(android.Manifest.permission.RECEIVE_SMS)
-        }
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
-            needed.add(android.Manifest.permission.READ_SMS)
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                needed.add(android.Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-        if (needed.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, needed.toTypedArray(), 101)
+            webView.evaluateJavascript(
+                "if (window.__onApkInstallStarted) window.__onApkInstallStarted();",
+                null
+            )
+        } catch (e: Exception) {
+            Log.e("PushToWeb", "Error starting package installer: ${e.message}", e)
+            Toast.makeText(this, "Не удалось запустить установщик: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
-    override fun onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
-        }
+    override fun onResume() {
+        super.onResume()
+        // If an update was installed or app is resumed, clean up old APKs if version changed or requested
+        cleanDownloadedApkFiles()
     }
 
     fun saveBackupWithStoragePicker(jsonContent: String, fileName: String) {
@@ -185,6 +284,11 @@ class MainActivity : AppCompatActivity() {
                         pendingFileName = null
                     }
                 }
+            }
+        } else if (requestCode == REQUEST_CODE_INSTALL_PERM) {
+            val apk = pendingApkFile
+            if (apk != null && apk.exists()) {
+                installApk(apk)
             }
         }
     }
