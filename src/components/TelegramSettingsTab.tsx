@@ -184,7 +184,7 @@ export const TelegramSettingsTab: React.FC<TelegramSettingsTabProps> = ({
 
         let photoOk = false;
         try {
-          const photoFetch = await fetch('/bot-avatar.jpg');
+          const photoFetch = await fetch('./bot-avatar.jpg');
           if (photoFetch.ok) {
             const blob = await photoFetch.blob();
             const photoRes = await setBotProfilePhoto(botToken, blob, apiEndpoint);
@@ -407,11 +407,11 @@ export const TelegramSettingsTab: React.FC<TelegramSettingsTabProps> = ({
               {/* 1. Avatar info */}
               <div className="flex items-center gap-3.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800">
                 <img
-                  src={`/bot-avatar.jpg?v=${avatarTimestamp}`}
+                  src={`./bot-avatar.jpg?v=${avatarTimestamp}`}
                   alt="Default Bot Avatar"
                   className="w-12 h-12 rounded-full ring-2 ring-sky-500/30 object-cover shadow-md shrink-0"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/icon.png';
+                    (e.target as HTMLImageElement).src = './icon.png';
                   }}
                 />
                 <div className="text-xs space-y-0.5">
