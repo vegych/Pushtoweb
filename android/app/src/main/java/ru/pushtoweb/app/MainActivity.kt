@@ -36,6 +36,106 @@ class MainActivity : AppCompatActivity() {
         private const val REQUEST_CODE_INSTALL_PERM = 2002
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Load saved Telegram credentials into Config object
+        loadSavedConfig()
+
+        // Start service only if explicitly enabled by user previously
+        val fgPrefs = getSharedPreferences("forwarder_service_prefs", Context.MODE_PRIVATE)
+        if (fgPrefs.getBoolean("key_service_running", false)) {
+            ForwarderForegroundService.start(this)
+        }
+
+        val assetLoader = WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .build()
+
+        webView = WebView(this).apply {
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                databaseEnabled = true
+                allowFileAccess = true
+                allowContentAccess = true
+                allowFileAccessFromFileURLs = true
+                allowUniversalAccessFromFileURLs = true
+                cacheMode = WebSettings.LOAD_DEFAULT
+                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            }
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): Boolean {
+                    val url = request?.url?.toString() ?: return false
+                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                        if (!url.contains("app.assets")) {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                startActivity(intent)
+                                return true
+                            } catch (e: Exception) {
+                                Log.e("PushToWeb", "Failed to open url: $url", e)
+                            }
+                        }
+                    }
+                    return false
+                }
+
+                override fun shouldInterceptRequest(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): WebResourceResponse? {
+                    val uri = request?.url ?: return null
+                    return assetLoader.shouldInterceptRequest(uri)
+                }
+            }
+            setDownloadListener { url, _, _, _, _ ->
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "Ошибка открытия загрузки: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+            webChromeClient = object : WebChromeClient() {
+                override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+                    Log.d("PushToWebJS", "${consoleMessage?.message()} -- From line ${consoleMessage?.lineNumber()} of ${consoleMessage?.sourceId()}")
+                    return true
+                }
+            }
+            addJavascriptInterface(AndroidBridge(this@MainActivity), "AndroidBridge")
+        }
+
+        setContentView(webView)
+
+        // Load via secure asset loader (supports ES modules and local storage)
+        webView.loadUrl(Config.APP_WEB_URL)
+    }
+
+    private fun loadSavedConfig() {
+        val prefs = getSharedPreferences("pushtoweb_config", Context.MODE_PRIVATE)
+        Config.TELEGRAM_BOT_TOKEN = prefs.getString("bot_token", Config.TELEGRAM_BOT_TOKEN) ?: Config.TELEGRAM_BOT_TOKEN
+        Config.TELEGRAM_CHAT_ID = prefs.getString("chat_id", Config.TELEGRAM_CHAT_ID) ?: Config.TELEGRAM_CHAT_ID
+        Config.TELEGRAM_API_ENDPOINT = prefs.getString("api_endpoint", Config.TELEGRAM_API_ENDPOINT) ?: Config.TELEGRAM_API_ENDPOINT
+        Config.WEBHOOK_URL = prefs.getString("webhook_url", Config.WEBHOOK_URL) ?: Config.WEBHOOK_URL
+    }
+
+    override fun onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         downloadThread?.interrupt()
