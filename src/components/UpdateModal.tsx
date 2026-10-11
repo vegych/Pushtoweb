@@ -253,7 +253,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                 </div>
               )}
 
-              {/* In-app download progress panel (Clean progress line style like 3x manager) */}
+              {/* In-app download progress panel (Clean progress line style) */}
               {isDownloading && (
                 <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
                   <div className="flex items-center justify-between text-xs">
