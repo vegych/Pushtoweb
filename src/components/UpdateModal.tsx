@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Sparkles, 
-  Download, 
-  RefreshCw, 
+  Cloud, 
   X, 
-  ExternalLink, 
-  CheckCircle2, 
-  AlertCircle,
-  PackageCheck,
-  Check,
-  AlertTriangle
+  RefreshCw,
+  AlertTriangle,
+  Check
 } from 'lucide-react';
-import { VersionInfo, checkAppUpdate, getInstalledVersion, GITHUB_RELEASES_URL, getReleaseType, getReleaseTypeBadge } from '../utils/version';
+import { VersionInfo, checkAppUpdate, getInstalledVersion, GITHUB_RELEASES_URL } from '../utils/version';
 import { Language } from '../utils/i18n';
 
 interface UpdateModalProps {
@@ -84,22 +79,9 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     try {
       const info = await checkAppUpdate();
       setVersionInfo(info);
-      if (onShowToast) {
-        if (info.hasUpdate) {
-          onShowToast(
-            lang === 'ru'
-              ? `Найдено обновление v${info.latestVersion}!`
-              : `New update v${info.latestVersion} available!`,
-            'success'
-          );
-        } else {
-          onShowToast(
-            lang === 'ru'
-              ? `У вас установлена последняя версия v${getInstalledVersion()}`
-              : `You are on the latest version v${getInstalledVersion()}`,
-            'success'
-          );
-        }
+      if (info.hasUpdate) {
+        // Auto-start download when update dialog opens if on native
+        handleStartDownloadDirectly(info);
       }
     } catch (e) {
       console.error(e);
@@ -111,12 +93,10 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     }
   };
 
-  const handleStartInAppUpdate = () => {
-    const apkUrl = versionInfo?.apkDownloadUrl || versionInfo?.downloadUrl;
-    if (!apkUrl) {
-      if (onShowToast) onShowToast(lang === 'ru' ? 'Ссылка на APK не найдена' : 'APK URL not found', 'error');
-      return;
-    }
+  const handleStartDownloadDirectly = (info?: VersionInfo | null) => {
+    const targetInfo = info || versionInfo;
+    const apkUrl = targetInfo?.apkDownloadUrl || targetInfo?.downloadUrl;
+    if (!apkUrl) return;
 
     if (isNative && window.AndroidBridge?.downloadAndInstallApk) {
       setIsDownloading(true);
@@ -124,15 +104,14 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
       setDownloadBytes(0);
       setDownloadError(null);
       setInstallStarted(false);
-      setDownloadStatus(lang === 'ru' ? 'Подключение к GitHub...' : 'Connecting to GitHub...');
+      setDownloadStatus(lang === 'ru' ? 'Подключение к серверу...' : 'Connecting to server...');
 
-      const fileName = versionInfo?.apkFileName || `PushToWeb-v${versionInfo?.latestVersion || 'latest'}.apk`;
+      const fileName = targetInfo?.apkFileName || `PushToWeb-v${targetInfo?.latestVersion || 'latest'}.apk`;
       window.AndroidBridge.downloadAndInstallApk(apkUrl, fileName);
     } else {
-      // Browser fallback (Web browser download directly)
       const link = document.createElement('a');
       link.href = apkUrl;
-      link.download = versionInfo?.apkFileName || 'PushToWeb.apk';
+      link.download = targetInfo?.apkFileName || 'PushToWeb.apk';
       link.target = '_blank';
       document.body.appendChild(link);
       link.click();
@@ -149,16 +128,6 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     setDownloadStatus(lang === 'ru' ? 'Загрузка отменена' : 'Download cancelled');
   };
 
-  const handleOpenExternal = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const url = versionInfo?.downloadUrl || GITHUB_RELEASES_URL;
-    if (typeof window !== 'undefined' && window.AndroidBridge?.openExternalUrl) {
-      window.AndroidBridge.openExternalUrl(url);
-    } else {
-      window.open(url, '_blank');
-    }
-  };
-
   useEffect(() => {
     if (isOpen) {
       fetchUpdate();
@@ -167,209 +136,121 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
 
   if (!isOpen) return null;
 
+  const currentVer = getInstalledVersion();
+  const latestVer = versionInfo?.latestVersion || currentVer;
+  const apkFileName = versionInfo?.apkFileName || `PushToWeb-v${latestVer}.apk`;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+      <div className="relative w-full max-w-lg bg-[#21212c] sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden border border-slate-700/50 text-slate-100 p-6 sm:p-7 space-y-6">
         
-        {/* Modal Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
+        {/* Header: Cloud icon + Title + Close Button */}
+        <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-500 border border-sky-500/20">
-              <Sparkles className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-sky-500 flex items-center justify-center text-white shadow-lg shadow-sky-500/20 shrink-0">
+              <Cloud className="w-6 h-6 fill-current" />
             </div>
-            <div>
-              <h3 className="font-bold text-base sm:text-lg">
-                {lang === 'ru' ? 'Обновления PushToWeb' : 'PushToWeb Updates'}
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {lang === 'ru' ? `Текущая версия: v${getInstalledVersion()}` : `Current version: v${getInstalledVersion()}`}
-              </p>
-            </div>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+              {lang === 'ru' ? 'Доступно обновление!' : 'Update available!'}
+            </h2>
           </div>
+
           <button
             onClick={() => {
-              if (isDownloading) {
-                handleCancelDownload();
-              }
+              if (isDownloading) handleCancelDownload();
               onClose();
             }}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-5 space-y-4">
-          {loading ? (
-            <div className="py-8 text-center space-y-3">
-              <RefreshCw className="w-8 h-8 mx-auto text-sky-500 animate-spin" />
-              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                {lang === 'ru' ? 'Проверка последних релизов на GitHub...' : 'Checking GitHub for new releases...'}
-              </p>
-            </div>
-          ) : versionInfo ? (
-            <>
-              {versionInfo.hasUpdate ? (
-                (() => {
-                  const relType = getReleaseType(versionInfo.currentVersion, versionInfo.latestVersion);
-                  const badge = getReleaseTypeBadge(relType, lang);
-                  return (
-                    <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/30 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200 space-y-2.5">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 font-semibold text-sm text-sky-600 dark:text-sky-400">
-                          <AlertCircle className="w-4 h-4 shrink-0" />
-                          <span>
-                            {lang === 'ru'
-                              ? `Доступна новая версия v${versionInfo.latestVersion}`
-                              : `New version v${versionInfo.latestVersion} available`}
-                          </span>
-                        </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${badge.bgClass}`}>
-                          {badge.label}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        {relType === 'feature'
-                          ? (lang === 'ru' ? 'Крупный релиз с новыми функциями и возможностями.' : 'Feature update with new capabilities.')
-                          : relType === 'major'
-                          ? (lang === 'ru' ? 'Глобальное обновление архитектуры приложения.' : 'Major release.')
-                          : (lang === 'ru' ? 'Патч с исправлением ошибок и точечными улучшениями.' : 'Patch with bugfixes.')}
-                      </p>
-                    </div>
-                  );
-                })()
-              ) : (
-                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">
-                      {lang === 'ru' ? 'У вас установлена последняя версия' : 'You are on the latest version'}
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      v{getInstalledVersion()} — {lang === 'ru' ? 'Обновления не требуются' : 'No updates available'}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* In-app download progress panel (Clean progress line style) */}
-              {isDownloading && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-200 flex items-center gap-2">
-                      <RefreshCw className="w-3.5 h-3.5 text-sky-400 animate-spin" />
-                      <span>{lang === 'ru' ? 'Скачивание обновления...' : 'Downloading update...'}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleCancelDownload}
-                      className="text-slate-400 hover:text-red-400 text-xs transition-colors cursor-pointer"
-                    >
-                      {lang === 'ru' ? 'Отмена' : 'Cancel'}
-                    </button>
-                  </div>
-
-                  {/* Clean progress bar line */}
-                  <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden relative">
-                    <div 
-                      className="h-full bg-sky-500 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, Math.max(5, downloadPercent))}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Install started banner */}
-              {installStarted && !isDownloading && (
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>
-                    {lang === 'ru'
-                      ? 'Установщик запущен. После обновления временный файл APK очищается автоматически.'
-                      : 'Installer launched. Downloaded APK will be deleted automatically.'}
-                  </span>
-                </div>
-              )}
-
-              {/* Download error banner */}
-              {downloadError && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                  <span>{downloadError}</span>
-                </div>
-              )}
-
-              {/* Versioning Legend Note */}
-              <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
-                <span className="font-semibold dark:text-slate-300 text-slate-700 block">
-                  {lang === 'ru' ? 'Формат версий:' : 'Versioning Scheme:'}
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[10px]">
-                  <div><code className="text-sky-500 font-bold">X.1.0</code> — {lang === 'ru' ? 'Крупные релизы и новые фичи' : 'Major feature releases'}</div>
-                  <div><code className="text-emerald-500 font-bold">X.X.1</code> — {lang === 'ru' ? 'Патчи и исправления ошибок' : 'Bugfixes and patches'}</div>
-                </div>
-              </div>
-
-              {/* Release Notes */}
-              {versionInfo.releaseNotes && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    {lang === 'ru' ? 'Список изменений:' : 'Release Notes:'}
-                  </label>
-                  <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed text-slate-700 dark:text-slate-300">
-                    {versionInfo.releaseNotes}
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="py-6 text-center text-sm text-slate-500">
-              {lang === 'ru' ? 'Нажмите «Проверить» для получения информации.' : 'Click "Check" to get version status.'}
-            </div>
-          )}
-        </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex flex-col sm:flex-row items-center justify-between gap-2.5">
-          <button
-            onClick={fetchUpdate}
-            disabled={loading || isDownloading}
-            className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-sky-500' : ''}`} />
-            <span>{lang === 'ru' ? 'Проверить снова' : 'Check again'}</span>
-          </button>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {/* Direct In-App Download Button (no browser redirect) */}
-            {versionInfo?.hasUpdate ? (
-              <button
-                type="button"
-                onClick={handleStartInAppUpdate}
-                disabled={isDownloading}
-                className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold transition-all shadow-md hover:shadow-sky-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 active:scale-95"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>
-                  {isDownloading
-                    ? (lang === 'ru' ? 'Скачивание...' : 'Downloading...')
-                    : (lang === 'ru' ? 'Скачать и установить' : 'Download & Install')}
-                </span>
-              </button>
-            ) : null}
-
-            {/* GitHub Releases Link */}
-            <button
-              type="button"
-              onClick={handleOpenExternal}
-              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              title={lang === 'ru' ? 'Открыть страницу релизов на GitHub' : 'Open GitHub releases page'}
-            >
-              <span>GitHub</span>
-              <ExternalLink className="w-3 h-3 opacity-70" />
-            </button>
+        {/* Version Badges */}
+        <div className="flex items-center justify-between text-sm">
+          <div className="px-3.5 py-1.5 rounded-xl bg-sky-500/20 text-sky-400 font-medium text-sm inline-flex items-center gap-1">
+            <span>{lang === 'ru' ? 'Новая:' : 'New:'}</span>
+            <span className="font-bold">v{latestVer}</span>
           </div>
+
+          <div className="text-slate-400 text-sm font-medium">
+            <span>{lang === 'ru' ? 'Текущая:' : 'Current:'}</span>{' '}
+            <span className="text-slate-300">v{currentVer}</span>
+          </div>
+        </div>
+
+        {/* Loading Spinner State */}
+        {loading && !isDownloading && (
+          <div className="py-6 flex items-center justify-center gap-3 text-slate-400 text-sm font-medium">
+            <RefreshCw className="w-5 h-5 text-sky-400 animate-spin" />
+            <span>{lang === 'ru' ? 'Проверка пакета...' : 'Checking package...'}</span>
+          </div>
+        )}
+
+        {/* Progress & File Download Info */}
+        {(isDownloading || !loading) && (
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between text-xs sm:text-sm font-medium text-slate-300">
+              <span className="truncate pr-2">{`Загрузка ${apkFileName}`}</span>
+              <span className="text-sky-400 font-bold shrink-0">
+                {isDownloading ? `${downloadPercent}%` : (versionInfo?.hasUpdate ? '100%' : '0%')}
+              </span>
+            </div>
+
+            {/* Dual Colored Progress Bar */}
+            <div className="w-full h-2.5 rounded-full bg-slate-800/80 overflow-hidden flex items-center p-0.5">
+              <div 
+                className="h-full bg-sky-500 rounded-full transition-all duration-300 shadow-sm"
+                style={{ width: `${isDownloading ? Math.max(3, downloadPercent * 0.25) : 25}%` }}
+              />
+              <div 
+                className="h-full bg-lime-500 rounded-full transition-all duration-300 shadow-sm ml-0.5"
+                style={{ width: `${isDownloading ? Math.max(0, downloadPercent * 0.75 - 1) : 75}%` }}
+              />
+            </div>
+
+            <p className="text-xs text-slate-400 pt-0.5">
+              {lang === 'ru'
+                ? 'По завершении загрузки сразу откроется окно установки'
+                : 'Installation window will open automatically after download'}
+            </p>
+          </div>
+        )}
+
+        {/* Install Started status */}
+        {installStarted && !isDownloading && (
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>
+              {lang === 'ru'
+                ? 'Установщик запущен. Нажмите Установить в появившемся окне.'
+                : 'Installer launched. Confirm installation in system popup.'}
+            </span>
+          </div>
+        )}
+
+        {/* Download Error status */}
+        {downloadError && (
+          <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>{downloadError}</span>
+          </div>
+        )}
+
+        {/* Bottom Cancel / Action Button */}
+        <div className="pt-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              if (isDownloading) handleCancelDownload();
+              onClose();
+            }}
+            className="w-full sm:w-auto px-8 py-3 rounded-2xl bg-[#2a2c3a] hover:bg-[#343648] text-slate-200 hover:text-white font-medium text-sm transition-all cursor-pointer shadow-md active:scale-95 text-center"
+          >
+            {isDownloading
+              ? (lang === 'ru' ? 'Отмена' : 'Cancel')
+              : (lang === 'ru' ? 'Закрыть' : 'Close')}
+          </button>
         </div>
 
       </div>
