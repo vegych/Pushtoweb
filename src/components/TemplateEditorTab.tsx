@@ -30,7 +30,8 @@ import {
   CheckCircle2,
   ArrowRight,
   Eye,
-  Settings2
+  Settings2,
+  Image
 } from 'lucide-react';
 import { ForwardingSettings } from '../types';
 import { DEFAULT_SETTINGS } from '../data/predefinedApps';
@@ -149,7 +150,7 @@ const TEMPLATE_TAGS: TagDefinition[] = [
     tag: '{metaFooter}',
     title: 'Подвал',
     desc: '📶 Оператор · ⏰ Время',
-    example: '<pre>📶 МТС · ⏰ 14:35</pre>',
+    example: '📶 МТС · ⏰ 14:35',
     category: 'sim',
     icon: Layers,
     colorClass: 'text-violet-400 bg-violet-950/60 border-violet-500/40 hover:bg-violet-900/60',
@@ -186,10 +187,10 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
     settings.otpHighlightTemplate || DEFAULT_SETTINGS.otpHighlightTemplate
   );
   const [sim1OperatorName, setSim1OperatorName] = useState(
-    settings.sim1OperatorName || 'МТС'
+    settings.sim1OperatorName || ''
   );
   const [sim2OperatorName, setSim2OperatorName] = useState(
-    settings.sim2OperatorName || 'МегаФон'
+    settings.sim2OperatorName || ''
   );
   const [showOperator, setShowOperator] = useState(settings.showOperator ?? true);
   const [showTimestamp, setShowTimestamp] = useState(settings.showTimestamp ?? true);
@@ -207,12 +208,12 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
   const [pushShowTitle, setPushShowTitle] = useState(false);
   const [pushShowText, setPushShowText] = useState(true);
   const [pushShowOtp, setPushShowOtp] = useState(true);
-  const [pushShowFooter, setPushShowFooter] = useState(true);
+  const [pushShowFooter, setPushShowFooter] = useState(false);
+  const [attachPushPhotos, setAttachPushPhotos] = useState(settings.attachPushPhotos ?? true);
 
   // Refs for cursor insertion in manual mode
   const smsTextareaRef = useRef<HTMLTextAreaElement>(null);
   const pushTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const otpInputRef = useRef<HTMLInputElement>(null);
 
   // Re-generate templates automatically when visual builder controls change
   useEffect(() => {
@@ -245,11 +246,11 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
     // Build Push template
     let pushTpl = '';
     if (pushShowApp && pushShowSender) {
-      pushTpl += '📲 <b>[{appName}]</b> {senderInfo}\n';
+      pushTpl += '📲 <b>[{appName}]</b>\n{senderInfo}\n';
     } else if (pushShowApp) {
       pushTpl += '📲 <b>[{appName}]</b>\n';
     } else if (pushShowSender) {
-      pushTpl += '👤 <i>{sender}</i>\n';
+      pushTpl += '{senderInfo}\n';
     }
 
     if (pushShowTitle) {
@@ -271,6 +272,7 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
     setPushTemplate(pushTpl.trim());
   }, [
     editorMode,
+    activeTab,
     smsShowHeader,
     smsShowSender,
     smsShowText,
@@ -297,14 +299,10 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
       targetElement = smsTextareaRef.current;
       currentValue = smsTemplate;
       setter = setSmsTemplate;
-    } else if (target === 'push') {
+    } else {
       targetElement = pushTextareaRef.current;
       currentValue = pushTemplate;
       setter = setPushTemplate;
-    } else {
-      targetElement = otpInputRef.current;
-      currentValue = otpHighlightTemplate;
-      setter = setOtpHighlightTemplate;
     }
 
     if (!targetElement) {
@@ -402,8 +400,8 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
     setSmsTemplate(DEFAULT_SETTINGS.smsTemplate);
     setPushTemplate(DEFAULT_SETTINGS.pushTemplate);
     setOtpHighlightTemplate(DEFAULT_SETTINGS.otpHighlightTemplate);
-    setSim1OperatorName('МТС');
-    setSim2OperatorName('МегаФон');
+    setSim1OperatorName('');
+    setSim2OperatorName('');
     setShowOperator(true);
     setShowTimestamp(true);
     setSmsShowHeader(true);
@@ -416,12 +414,13 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
     setPushShowTitle(false);
     setPushShowText(true);
     setPushShowOtp(true);
-    setPushShowFooter(true);
+    setPushShowFooter(false);
+    setAttachPushPhotos(true);
     onShowToast('Шаблоны сброшены к стандартным', 'success');
   };
 
   const handleSave = () => {
-    onUpdateSettings({
+    const newSettings: ForwardingSettings = {
       ...settings,
       smsTemplate: smsTemplate.trim(),
       pushTemplate: pushTemplate.trim(),
@@ -430,7 +429,14 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
       sim2OperatorName: sim2OperatorName.trim(),
       showOperator,
       showTimestamp,
-    });
+      attachPushPhotos,
+    };
+    onUpdateSettings(newSettings);
+
+    if (window.AndroidBridge?.savePushConfig) {
+      window.AndroidBridge.savePushConfig(attachPushPhotos);
+    }
+
     onShowToast('Настройки оформления сохранены', 'success');
   };
 
@@ -445,6 +451,7 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
     sim2OperatorName,
     showOperator,
     showTimestamp,
+    attachPushPhotos,
   };
 
   const sampleSmsFormatted = formatTelegramMessage({
@@ -520,134 +527,14 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
         </div>
       </div>
 
-      {/* 🚀 COMPACT STYLE PRESETS: 4 Sleek Horizontal Buttons */}
-      <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold text-slate-300 flex items-center gap-1 text-[11px] uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-            Готовые стили оформления:
-          </span>
-          <span className="text-slate-500 text-[10px]">Кликните для выбора</span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {/* Preset 1: Classic (Sky Theme) */}
-          <button
-            type="button"
-            onClick={() => applyPreset('classic')}
-            className={`h-[68px] p-2.5 rounded-xl transition-all text-left group cursor-pointer flex flex-col justify-between border-2 overflow-hidden ${
-              selectedPreset === 'classic'
-                ? 'bg-sky-950/60 border-sky-400 ring-2 ring-sky-500/40 shadow-md shadow-sky-950/50'
-                : 'bg-slate-950 hover:bg-slate-850 border-slate-800/90 hover:border-sky-500/40 opacity-85 hover:opacity-100 shadow-sm'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-1 min-w-0">
-              <span className={`font-bold text-xs truncate whitespace-nowrap ${selectedPreset === 'classic' ? 'text-sky-300' : 'text-white group-hover:text-sky-400'}`}>
-                🌟 Классика
-              </span>
-              <span className={`text-[9px] px-1.5 py-0.2 rounded border shrink-0 whitespace-nowrap ${
-                selectedPreset === 'classic'
-                  ? 'bg-sky-900/80 text-sky-200 border-sky-400 font-semibold'
-                  : 'bg-sky-950/80 text-sky-300 border-sky-800'
-              }`}>
-                Топ
-              </span>
-            </div>
-            <p className={`text-[10px] truncate ${selectedPreset === 'classic' ? 'text-sky-200/90' : 'text-slate-400'}`}>
-              [SMS] + Текст + 2FA + Оператор
-            </p>
-          </button>
-
-          {/* Preset 2: Compact (Emerald Theme) */}
-          <button
-            type="button"
-            onClick={() => applyPreset('compact')}
-            className={`h-[68px] p-2.5 rounded-xl transition-all text-left group cursor-pointer flex flex-col justify-between border-2 overflow-hidden ${
-              selectedPreset === 'compact'
-                ? 'bg-emerald-950/60 border-emerald-400 ring-2 ring-emerald-500/40 shadow-md shadow-emerald-950/50'
-                : 'bg-slate-950 hover:bg-slate-850 border-slate-800/90 hover:border-emerald-500/40 opacity-85 hover:opacity-100 shadow-sm'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-1 min-w-0">
-              <span className={`font-bold text-xs truncate whitespace-nowrap ${selectedPreset === 'compact' ? 'text-emerald-300' : 'text-white group-hover:text-emerald-400'}`}>
-                ⚡ Компактный
-              </span>
-              <span className={`text-[9px] px-1.5 py-0.2 rounded border shrink-0 whitespace-nowrap ${
-                selectedPreset === 'compact'
-                  ? 'bg-emerald-900/80 text-emerald-200 border-emerald-400 font-semibold'
-                  : 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
-              }`}>
-                1 строка
-              </span>
-            </div>
-            <p className={`text-[10px] truncate ${selectedPreset === 'compact' ? 'text-emerald-200/90' : 'text-slate-400'}`}>
-              Отправитель: Текст + Код
-            </p>
-          </button>
-
-          {/* Preset 3: Minimal (Amber Theme) */}
-          <button
-            type="button"
-            onClick={() => applyPreset('minimal')}
-            className={`h-[68px] p-2.5 rounded-xl transition-all text-left group cursor-pointer flex flex-col justify-between border-2 overflow-hidden ${
-              selectedPreset === 'minimal'
-                ? 'bg-amber-950/60 border-amber-400 ring-2 ring-amber-500/40 shadow-md shadow-amber-950/50'
-                : 'bg-slate-950 hover:bg-slate-850 border-slate-800/90 hover:border-amber-500/40 opacity-85 hover:opacity-100 shadow-sm'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-1 min-w-0">
-              <span className={`font-bold text-xs truncate whitespace-nowrap ${selectedPreset === 'minimal' ? 'text-amber-300' : 'text-white group-hover:text-amber-400'}`}>
-                🛡️ Только код
-              </span>
-              <span className={`text-[9px] px-1.5 py-0.2 rounded border shrink-0 whitespace-nowrap ${
-                selectedPreset === 'minimal'
-                  ? 'bg-amber-900/80 text-amber-200 border-amber-400 font-semibold'
-                  : 'bg-amber-950/80 text-amber-300 border-amber-800'
-              }`}>
-                Минимум
-              </span>
-            </div>
-            <p className={`text-[10px] truncate ${selectedPreset === 'minimal' ? 'text-amber-200/90' : 'text-slate-400'}`}>
-              Текст + код без плашек
-            </p>
-          </button>
-
-          {/* Preset 4: Detailed (Purple Theme) */}
-          <button
-            type="button"
-            onClick={() => applyPreset('detailed')}
-            className={`h-[68px] p-2.5 rounded-xl transition-all text-left group cursor-pointer flex flex-col justify-between border-2 overflow-hidden ${
-              selectedPreset === 'detailed'
-                ? 'bg-purple-950/60 border-purple-400 ring-2 ring-purple-500/40 shadow-md shadow-purple-950/50'
-                : 'bg-slate-950 hover:bg-slate-850 border-slate-800/90 hover:border-purple-500/40 opacity-85 hover:opacity-100 shadow-sm'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-1 min-w-0">
-              <span className={`font-bold text-xs truncate whitespace-nowrap ${selectedPreset === 'detailed' ? 'text-purple-300' : 'text-white group-hover:text-purple-400'}`}>
-                📋 Подробный
-              </span>
-              <span className={`text-[9px] px-1.5 py-0.2 rounded border shrink-0 whitespace-nowrap ${
-                selectedPreset === 'detailed'
-                  ? 'bg-purple-900/80 text-purple-200 border-purple-400 font-semibold'
-                  : 'bg-purple-950/80 text-purple-300 border-purple-800'
-              }`}>
-                Карточка
-              </span>
-            </div>
-            <p className={`text-[10px] truncate ${selectedPreset === 'detailed' ? 'text-purple-200/90' : 'text-slate-400'}`}>
-              Заголовок + Отправитель + Подвал
-            </p>
-          </button>
-        </div>
-      </div>
+      {/* Main Grid: Builder / Editor + Live Telegram Preview */}
 
       {/* Main Grid: Builder / Editor + Live Telegram Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
         {/* Left Column: Builder & Operator Settings (7 cols) */}
         <div className="lg:col-span-7 space-y-3">
-          {/* Mode switch & Tab Selector in 1 Compact Row */}
-          <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
-            {/* Tab: SMS vs Push */}
+          {/* Tab Selector: SMS vs Push */}
+          <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
             <div className="flex items-center p-0.5 rounded-lg bg-slate-950 border border-slate-800">
               <button
                 type="button"
@@ -672,35 +559,6 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
               >
                 <Bell className="w-3.5 h-3.5" />
                 <span>Push</span>
-              </button>
-            </div>
-
-            {/* Mode: Visual vs Manual */}
-            <div className="flex items-center p-0.5 rounded-lg bg-slate-950 border border-slate-800">
-              <button
-                type="button"
-                onClick={() => setEditorMode('visual')}
-                className={`px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1 cursor-pointer ${
-                  editorMode === 'visual'
-                    ? 'bg-slate-800 text-sky-400 border border-slate-700'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <SlidersHorizontal className="w-3 h-3" />
-                <span>Конструктор</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEditorMode('manual')}
-                className={`px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1 cursor-pointer ${
-                  editorMode === 'manual'
-                    ? 'bg-slate-800 text-sky-400 border border-slate-700'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Code className="w-3 h-3" />
-                <span>Текст</span>
               </button>
             </div>
           </div>
@@ -855,13 +713,13 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
 
                   <label className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer">
                     <div className="flex items-center gap-2">
-                      <Layers className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                      <span className="text-white text-xs">Подвал (📶 Оператор · ⏰ Время)</span>
+                      <Image className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                      <span className="text-white text-xs">Прикреплять картинку / фото из Push</span>
                     </div>
                     <input
                       type="checkbox"
-                      checked={pushShowFooter}
-                      onChange={(e) => setPushShowFooter(e.target.checked)}
+                      checked={attachPushPhotos}
+                      onChange={(e) => setAttachPushPhotos(e.target.checked)}
                       className="rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer"
                     />
                   </label>
@@ -951,56 +809,21 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div className="space-y-1">
-                <label className="block text-slate-300 font-medium text-[11px]">
-                  Имя оператора (SIM 1)
-                </label>
-                <div className="flex gap-1.5">
-                  <input
-                    type="text"
-                    value={sim1OperatorName}
-                    onChange={(e) => setSim1OperatorName(e.target.value)}
-                    placeholder="МТС"
-                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white font-medium text-xs focus:outline-none focus:border-sky-500"
-                  />
-                  {['МТС', 'МегаФон', 'билайн'].map((op) => (
-                    <button
-                      key={op}
-                      type="button"
-                      onClick={() => setSim1OperatorName(op)}
-                      className="px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-sky-400 border border-slate-700 cursor-pointer"
-                    >
-                      {op}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-slate-300 font-medium text-[11px]">
-                  Имя оператора (SIM 2)
-                </label>
-                <div className="flex gap-1.5">
-                  <input
-                    type="text"
-                    value={sim2OperatorName}
-                    onChange={(e) => setSim2OperatorName(e.target.value)}
-                    placeholder="МегаФон"
-                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white font-medium text-xs focus:outline-none focus:border-sky-500"
-                  />
-                  {['Т-Банк', 'Сбер', 't2'].map((op) => (
-                    <button
-                      key={op}
-                      type="button"
-                      onClick={() => setSim2OperatorName(op)}
-                      className="px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-sky-400 border border-slate-700 cursor-pointer"
-                    >
-                      {op}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                value={sim1OperatorName}
+                onChange={(e) => setSim1OperatorName(e.target.value)}
+                placeholder="SIM 1"
+                className="w-full px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white font-medium text-xs focus:outline-none focus:border-sky-500"
+              />
+              <input
+                type="text"
+                value={sim2OperatorName}
+                onChange={(e) => setSim2OperatorName(e.target.value)}
+                placeholder="SIM 2"
+                className="w-full px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white font-medium text-xs focus:outline-none focus:border-sky-500"
+              />
             </div>
 
             {/* Operator and Time switches - Compact */}
@@ -1024,52 +847,6 @@ export const TemplateEditorTab: React.FC<TemplateEditorTabProps> = ({
                   className="rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-sky-500 w-3.5 h-3.5 cursor-pointer"
                 />
               </label>
-            </div>
-          </div>
-
-          {/* SECTION: Оформление блока 2FA кодов - Compact */}
-          <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
-            <div className="flex items-center gap-1.5 pb-1 border-b border-slate-800">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <h3 className="font-bold text-white text-xs">
-                Формат выделения кода 2FA
-              </h3>
-            </div>
-
-            <div className="space-y-1.5">
-              <input
-                ref={otpInputRef}
-                type="text"
-                value={otpHighlightTemplate}
-                onChange={(e) => setOtpHighlightTemplate(e.target.value)}
-                placeholder="🔑 Код: <code>{otpCode}</code>"
-                className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-sky-300 font-mono text-xs focus:outline-none focus:border-sky-500"
-              />
-
-              <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-                <button
-                  type="button"
-                  onClick={() => setOtpHighlightTemplate('🔑 Код: <code>{otpCode}</code>')}
-                  className={`px-2 py-0.5 rounded transition-all cursor-pointer font-mono text-[10px] ${
-                    otpHighlightTemplate === '🔑 Код: <code>{otpCode}</code>'
-                      ? 'bg-sky-950 text-sky-300 border-2 border-sky-400 ring-1 ring-sky-500 font-bold'
-                      : 'bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700'
-                  }`}
-                >
-                  🔑 Код: &lt;code&gt;1234&lt;/code&gt;
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOtpHighlightTemplate('👉 <code>{otpCode}</code>')}
-                  className={`px-2 py-0.5 rounded transition-all cursor-pointer font-mono text-[10px] ${
-                    otpHighlightTemplate === '👉 <code>{otpCode}</code>'
-                      ? 'bg-amber-950 text-amber-300 border-2 border-amber-400 ring-1 ring-amber-500 font-bold'
-                      : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700'
-                  }`}
-                >
-                  👉 &lt;code&gt;1234&lt;/code&gt;
-                </button>
-              </div>
             </div>
           </div>
         </div>

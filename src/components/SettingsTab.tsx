@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   FileJson,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  Image
 } from 'lucide-react';
 import { ForwardingSettings, AppFilterRule } from '../types';
 import { Language, LanguageMode, Theme, ThemeMode, translations } from '../utils/i18n';

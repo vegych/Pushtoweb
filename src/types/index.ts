@@ -53,6 +53,7 @@ export interface ForwardingSettings {
   otpHighlightTemplate: string; // Формат выделения 2FA кода
   showStatusBarNotification: boolean; // Уведомление в строке состояния о работе сервиса (SMS / Push)
   showNotificationWhenStopped: boolean; // Показывать ли уведомление в строке состояния при остановленном сервисе
+  attachPushPhotos?: boolean; // Пересылать прикрепленные картинки/фото из push-уведомлений
 }
 
 export interface IncomingMessagePayload {
@@ -115,6 +116,7 @@ export interface AndroidNativeBridge {
   syncSettings?: (settingsJson: string) => void;
   saveTelegramConfig?: (token: string, chatId: string, endpoint: string, webhook: string) => void;
   getTelegramConfig?: () => string;
+  savePushConfig?: (attachPushPhotos: boolean) => void;
   getInstalledApps?: () => string;
   saveBackupJson?: (jsonContent: string, fileName: string) => void;
   syncAppRules?: (rulesJson: string) => void;

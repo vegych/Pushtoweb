@@ -289,16 +289,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold dark:text-white text-slate-900 text-sm sm:text-base">
-                {t.forwardingService}:
-              </span>
-              <span
-                className={`text-xs px-2 py-0.5 rounded-md font-semibold border ${
-                  isServiceRunning
-                    ? 'dark:bg-emerald-950/80 bg-emerald-100/80 dark:text-emerald-300 text-emerald-700 dark:border-emerald-600/50 border-emerald-300'
-                    : 'dark:bg-slate-800 bg-slate-100 dark:text-slate-400 text-slate-600 dark:border-slate-700 border-slate-300'
-                }`}
-              >
-                {isServiceRunning ? `🟢 ${t.serviceRunning}` : `⏸️ ${t.serviceStopped}`}
+                {t.forwardingService}
               </span>
             </div>
 
@@ -306,16 +297,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               <span className="flex items-center gap-1">
                 <span className={`w-1.5 h-1.5 rounded-full ${isBotConfigured ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                 <span>{isBotConfigured ? t.botReady : t.botNotConfigured}</span>
-              </span>
-              <span>·</span>
-              <span className="flex items-center gap-1">
-                <span className={`w-1.5 h-1.5 rounded-full ${settings.forwardSmsEnabled ? 'bg-sky-500' : 'bg-slate-400'}`} />
-                <span>SMS {settings.forwardSmsEnabled ? t.on : t.off}</span>
-              </span>
-              <span>·</span>
-              <span className="flex items-center gap-1">
-                <span className={`w-1.5 h-1.5 rounded-full ${settings.forwardPushEnabled ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                <span>Push {settings.forwardPushEnabled ? `${t.on} (${enabledAppsCount})` : t.off}</span>
               </span>
             </div>
           </div>

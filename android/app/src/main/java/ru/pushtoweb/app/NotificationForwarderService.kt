@@ -179,6 +179,23 @@ class NotificationForwarderService : NotificationListenerService() {
             appPackage
         }
 
+        val attachPhotosEnabled = prefs.getBoolean("key_attach_push_photos", true)
+
+        // Check if notification contains attached image/picture (e.g. BigPictureStyle)
+        val imageBitmap: android.graphics.Bitmap? = if (attachPhotosEnabled) {
+            try {
+                val pic = extras.get(Notification.EXTRA_PICTURE) as? android.graphics.Bitmap
+                if (pic != null) {
+                    pic
+                } else {
+                    val icon = extras.get(Notification.EXTRA_LARGE_ICON) as? android.graphics.Bitmap
+                    icon
+                }
+            } catch (e: Exception) {
+                null
+            }
+        } else null
+
         // Process notification and extract only new delta messages
         val newMessages = NotificationDeduplicator.processNotification(sbn)
 
@@ -193,7 +210,8 @@ class NotificationForwarderService : NotificationListenerService() {
                 text = msgText,
                 appName = appName,
                 packageName = appPackage,
-                title = title
+                title = title,
+                imageBitmap = imageBitmap
             )
         }
     }

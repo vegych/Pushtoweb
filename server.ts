@@ -56,10 +56,10 @@ async function startServer() {
   // App version check
   app.get('/api/version', (req, res) => {
     res.json({
-      version: '1.1.21',
-      latestVersion: '1.1.21',
+      version: '1.2.0',
+      latestVersion: '1.2.0',
       downloadUrl: 'https://github.com/vegych/PushToWeb/releases/latest',
-      releaseNotes: '• Встроенное скачивание и установка обновлений APK прямо из приложения без перехода в браузер (с тихой очисткой временных файлов)\n• Обновленная лаконичная полоса прогресса скачивания\n• Обновленные иконки и аватарка бота без белых полей, аккуратно отцентрированные на фиолетовом фоне\n• Чистая настройка оформления бота Telegram с предустановкой аватарки и шапки без лишнего приветственного описания',
+      releaseNotes: '• Крупное обновление 1.2.0: полностью переработан визуальный конструктор сообщений SMS и Push\n• Упрощено управление 2FA: автоматическое копируемое выделение кода по умолчанию без перегруженных настроек\n• Возможность отключения прикрепления фото/изображений в Push-уведомлениях прямо из конструктора\n• Строка оператора и времени очищена от рамок и оформлена аккуратным легким текстом\n• Минималистичный главный экран: удалены дублирующиеся бейджи, компактный переключатель сервиса\n• Вкладка переименована в лаконичное «Главная»',
     });
   });
 
@@ -696,7 +696,7 @@ object Config {
     var TELEGRAM_BOT_TOKEN = "${botToken}"
     var TELEGRAM_CHAT_ID = "${chatId}"
     var TELEGRAM_API_ENDPOINT = "${apiEndpoint}"
-    var APP_VERSION_NAME = "1.1.21"
+    var APP_VERSION_NAME = "1.2.0"
 }
 `.trim());
 
@@ -758,14 +758,17 @@ object TelegramSender {
                         if (type == "sms") {
                             append("💬 <b>[SMS]</b> <code>$sender</code>\\n")
                         } else {
-                            append("📲 <b>[\${appName.ifEmpty { "Уведомление" }}]</b> · <i>$sender</i>\\n")
+                            append("📲 <b>[\${appName.ifEmpty { "Уведомление" }}]</b>\\n")
+                            if (sender.isNotEmpty()) {
+                                append("$sender\\n")
+                            }
                         }
                         if (title.isNotEmpty() && title != sender && title != appName) {
                             append("<b>$title</b>\\n")
                         }
                         append("$text\\n")
                         if (operator.isNotEmpty()) {
-                            append("\\n<pre>📶 $operator</pre>")
+                            append("\\n📶 $operator")
                         }
                     }
 

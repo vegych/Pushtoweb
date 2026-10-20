@@ -31,7 +31,7 @@ export const translations = {
     testError: 'Ошибка отправки в Telegram: ',
 
     // Tabs
-    tabDashboard: 'Главная (Статистика)',
+    tabDashboard: 'Главная',
     tabFilters: 'Фильтр приложений',
     tabTelegram: 'Телеграм и шлюз',
     tabTemplates: 'Шаблоны сообщений',
@@ -139,6 +139,8 @@ export const translations = {
     backgroundSection: 'Фоновая работа и уведомления',
     showStatusBarNotif: 'Уведомление при работе сервиса',
     showStatusBarNotifSubtext: 'Показывать постоянный значок активности сервиса пересылки в строке состояния Android',
+    attachPushPhotosTitle: 'Пересылка изображений из Push',
+    attachPushPhotosSubtext: 'Прикреплять обложки постов и фото из push-уведомлений приложений при пересылке в Telegram',
     appearanceSection: 'Внешний вид и язык',
     batterySection: 'Работа в фоне и батарея',
     batteryUnrestrictedTitle: 'Снять ограничения расхода заряда в фоне',
@@ -178,7 +180,7 @@ export const translations = {
     testError: 'Telegram delivery error: ',
 
     // Tabs
-    tabDashboard: 'Dashboard (Stats)',
+    tabDashboard: 'Dashboard',
     tabFilters: 'App Filters',
     tabTelegram: 'Telegram & Gateway',
     tabTemplates: 'Message Templates',
@@ -286,6 +288,8 @@ export const translations = {
     backgroundSection: 'Background Operation & Notifications',
     showStatusBarNotif: 'Notification while service is running',
     showStatusBarNotifSubtext: 'Display persistent service icon in status bar while active',
+    attachPushPhotosTitle: 'Forward Images from Push',
+    attachPushPhotosSubtext: 'Attach post covers and photos from push notifications when forwarding to Telegram',
     appearanceSection: 'Appearance & Language',
     batterySection: 'Background Operation & Battery',
     batteryUnrestrictedTitle: 'Ignore Battery Optimizations',

@@ -17,6 +17,7 @@ export function loadSettings(): ForwardingSettings {
         forwardSmsEnabled: parsed.forwardSmsEnabled !== undefined ? parsed.forwardSmsEnabled : true,
         forwardPushEnabled: parsed.forwardPushEnabled !== undefined ? parsed.forwardPushEnabled : true,
         ignoreOngoing: parsed.ignoreOngoing !== undefined ? parsed.ignoreOngoing : true,
+        attachPushPhotos: parsed.attachPushPhotos !== undefined ? parsed.attachPushPhotos : true,
       };
     }
   } catch (e) {

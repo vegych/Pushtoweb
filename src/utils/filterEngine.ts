@@ -351,7 +351,7 @@ export function formatTelegramMessage(params: {
   const escapedSender = escapeHtml(sender);
   const escapedTitle = escapeHtml(title);
   const escapedText = escapeHtml(text);
-  const escapedOperator = escapeHtml(operator || settings.sim1OperatorName || 'МТС');
+  const escapedOperator = escapeHtml(operator || settings.sim1OperatorName || '');
 
   const timeStr = new Date(timestamp).toLocaleTimeString('ru-RU', {
     hour: '2-digit',
@@ -377,7 +377,7 @@ export function formatTelegramMessage(params: {
   if (settings.showTimestamp) {
     metaParts.push(`⏰ ${timeStr}`);
   }
-  const metaFooter = metaParts.length > 0 ? `<pre>${metaParts.join('  ·  ')}</pre>` : '';
+  const metaFooter = metaParts.length > 0 ? metaParts.join('  ·  ') : '';
 
   // Replace all aliases for template variables (both snake_case and camelCase)
   const applyVariables = (tpl: string) => {
@@ -403,9 +403,9 @@ export function formatTelegramMessage(params: {
   // Template based formatting (SMS vs Push)
   const template = isSms
     ? (settings.smsTemplate || '💬 <b>[SMS]</b> {sender}\n{text}\n\n{otp_block}{meta_footer}')
-    : (settings.pushTemplate || '📲 <b>[{app_name}]</b> {sender_info}\n{text}\n\n{otp_block}{meta_footer}');
+    : (settings.pushTemplate || '📲 <b>[{app_name}]</b>\n{sender_info}\n{text}\n\n{otp_block}{meta_footer}');
 
-  const senderInfo = escapedSender ? `· <i>${escapedSender}</i>` : '';
+  const senderInfo = escapedSender ? escapedSender : '';
 
   let output = applyVariables(template);
 

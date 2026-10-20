@@ -142,6 +142,14 @@ class AndroidBridge(private val activity: Activity) {
     }
 
     @JavascriptInterface
+    fun savePushConfig(attachPushPhotos: Boolean) {
+        val prefs = activity.getSharedPreferences("forwarder_service_prefs", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean("key_attach_push_photos", attachPushPhotos)
+            .apply()
+    }
+
+    @JavascriptInterface
     fun updateServiceStatus(serviceRunning: Boolean, smsEnabled: Boolean, pushEnabled: Boolean, showNotification: Boolean = true) {
         val prefs = activity.getSharedPreferences("forwarder_service_prefs", Context.MODE_PRIVATE)
         prefs.edit()

@@ -39,7 +39,8 @@ object TelegramSender {
         appName: String = "",
         packageName: String = "",
         title: String = "",
-        operator: String = ""
+        operator: String = "",
+        imageBitmap: android.graphics.Bitmap? = null
     ) {
         try {
             val json = JSONObject().apply {
@@ -70,24 +71,64 @@ object TelegramSender {
                     if (type == "sms") {
                         append("💬 <b>[SMS]</b> <code>$sender</code>\n")
                     } else {
-                        append("📲 <b>[${appName.ifEmpty { "Уведомление" }}]</b> · <i>$sender</i>\n")
+                        append("📲 <b>[${appName.ifEmpty { "Уведомление" }}]</b>\n")
+                        if (sender.isNotEmpty()) {
+                            append("$sender\n")
+                        }
                     }
                     if (title.isNotEmpty() && title != sender && title != appName) {
                         append("<b>$title</b>\n")
                     }
                     append("$text\n")
                     if (operator.isNotEmpty()) {
-                        append("\n<pre>📶 $operator</pre>")
+                        append("\n📶 $operator")
                     }
                 }
 
+                val endpoint = Config.TELEGRAM_API_ENDPOINT.trimEnd('/')
+                val botToken = Config.TELEGRAM_BOT_TOKEN
+                val chatId = Config.TELEGRAM_CHAT_ID
+
+                if (imageBitmap != null) {
+                    try {
+                        val stream = java.io.ByteArrayOutputStream()
+                        imageBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, stream)
+                        val byteArray = stream.toByteArray()
+
+                        val multipartBody = okhttp3.MultipartBody.Builder()
+                            .setType(okhttp3.MultipartBody.FORM)
+                            .addFormDataPart("chat_id", chatId)
+                            .addFormDataPart("caption", messageText)
+                            .addFormDataPart("parse_mode", "HTML")
+                            .addFormDataPart(
+                                "photo",
+                                "notification_image.jpg",
+                                okhttp3.RequestBody.create("image/jpeg".toMediaType(), byteArray)
+                            )
+                            .build()
+
+                        val tgUrl = "$endpoint/bot$botToken/sendPhoto"
+                        val tgRequest = Request.Builder().url(tgUrl).post(multipartBody).build()
+                        val response = client.newCall(tgRequest).execute()
+                        val responseStr = response.body?.string()
+                        response.close()
+
+                        if (responseStr != null && JSONObject(responseStr).optBoolean("ok")) {
+                            return
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
+                // Standard sendMessage fallback
                 val tgJson = JSONObject().apply {
-                    put("chat_id", Config.TELEGRAM_CHAT_ID)
+                    put("chat_id", chatId)
                     put("text", messageText)
                     put("parse_mode", "HTML")
                 }
 
-                val tgUrl = "${Config.TELEGRAM_API_ENDPOINT.trimEnd('/')}/bot${Config.TELEGRAM_BOT_TOKEN}/sendMessage"
+                val tgUrl = "$endpoint/bot$botToken/sendMessage"
                 val tgBody = tgJson.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
                 val tgRequest = Request.Builder().url(tgUrl).post(tgBody).build()
                 client.newCall(tgRequest).execute().close()
@@ -104,10 +145,11 @@ object TelegramSender {
         appName: String = "",
         packageName: String = "",
         title: String = "",
-        operator: String = ""
+        operator: String = "",
+        imageBitmap: android.graphics.Bitmap? = null
     ) {
         CoroutineScope(Dispatchers.IO).launch {
-            forwardPayloadSync(type, sender, text, appName, packageName, title, operator)
+            forwardPayloadSync(type, sender, text, appName, packageName, title, operator, imageBitmap)
         }
     }
 }
