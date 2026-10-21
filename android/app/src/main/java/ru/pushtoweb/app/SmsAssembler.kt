@@ -68,6 +68,7 @@ object SmsAssembler {
 
         // 3. Send the assembled SMS to Telegram
         TelegramSender.forwardPayloadSync(
+            context = pending.context,
             type = "sms",
             sender = pending.sender,
             text = fullText,

@@ -205,6 +205,7 @@ class NotificationForwarderService : NotificationListenerService() {
                 continue
             }
             TelegramSender.forwardPayload(
+                context = applicationContext,
                 type = "notification",
                 sender = title.ifEmpty { appName },
                 text = msgText,

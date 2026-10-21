@@ -56,10 +56,10 @@ async function startServer() {
   // App version check
   app.get('/api/version', (req, res) => {
     res.json({
-      version: '1.2.0',
-      latestVersion: '1.2.0',
+      version: '1.3.0',
+      latestVersion: '1.3.0',
       downloadUrl: 'https://github.com/vegych/PushToWeb/releases/latest',
-      releaseNotes: '• Крупное обновление 1.2.0: полностью переработан визуальный конструктор сообщений SMS и Push\n• Упрощено управление 2FA: автоматическое копируемое выделение кода по умолчанию без перегруженных настроек\n• Возможность отключения прикрепления фото/изображений в Push-уведомлениях прямо из конструктора\n• Строка оператора и времени очищена от рамок и оформлена аккуратным легким текстом\n• Минималистичный главный экран: удалены дублирующиеся бейджи, компактный переключатель сервиса\n• Вкладка переименована в лаконичное «Главная»',
+      releaseNotes: '• Обновление 1.3.0: Полноценное локальное сохранение статистики и журнала пересылки на устройстве Android (SharedPreferences)\n• Исправлено обновление счетчиков пересланных SMS и Push в реальном времени при открытом и закрытом приложении\n• Корректное определение точной нативной версии приложения AndroidBridge',
     });
   });
 
@@ -696,7 +696,7 @@ object Config {
     var TELEGRAM_BOT_TOKEN = "${botToken}"
     var TELEGRAM_CHAT_ID = "${chatId}"
     var TELEGRAM_API_ENDPOINT = "${apiEndpoint}"
-    var APP_VERSION_NAME = "1.2.0"
+    var APP_VERSION_NAME = "1.3.0"
 }
 `.trim());
 

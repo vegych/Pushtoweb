@@ -307,12 +307,43 @@ class AndroidBridge(private val activity: Activity) {
     }
 
     @JavascriptInterface
+    fun getForwardedLogs(): String {
+        val prefs = activity.getSharedPreferences("pushtoweb_logs", Context.MODE_PRIVATE)
+        return prefs.getString("key_logs_json", "[]") ?: "[]"
+    }
+
+    @JavascriptInterface
+    fun recordForwardedLog(logJson: String) {
+        try {
+            val prefs = activity.getSharedPreferences("pushtoweb_logs", Context.MODE_PRIVATE)
+            val currentRaw = prefs.getString("key_logs_json", "[]") ?: "[]"
+            val currentArray = org.json.JSONArray(currentRaw)
+            val newEntry = org.json.JSONObject(logJson)
+            
+            val updatedArray = org.json.JSONArray()
+            updatedArray.put(newEntry)
+            for (i in 0 until Math.min(currentArray.length(), 199)) {
+                updatedArray.put(currentArray.get(i))
+            }
+            prefs.edit().putString("key_logs_json", updatedArray.toString()).apply()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    @JavascriptInterface
+    fun clearForwardedLogs() {
+        val prefs = activity.getSharedPreferences("pushtoweb_logs", Context.MODE_PRIVATE)
+        prefs.edit().putString("key_logs_json", "[]").apply()
+    }
+
+    @JavascriptInterface
     fun getAppVersionName(): String {
         return try {
             val pInfo = activity.packageManager.getPackageInfo(activity.packageName, 0)
-            pInfo.versionName ?: "1.1.0"
+            pInfo.versionName ?: Config.APP_VERSION_NAME
         } catch (e: Exception) {
-            "1.1.0"
+            Config.APP_VERSION_NAME
         }
     }
 

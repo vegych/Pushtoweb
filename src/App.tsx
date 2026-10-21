@@ -205,6 +205,22 @@ export default function App() {
       })
       .catch(() => {});
 
+    // Load logs from native Android bridge if running inside native APK
+    if (typeof window !== 'undefined' && window.AndroidBridge?.getForwardedLogs) {
+      try {
+        const rawLogs = window.AndroidBridge.getForwardedLogs();
+        if (rawLogs) {
+          const parsedLogs = JSON.parse(rawLogs);
+          if (Array.isArray(parsedLogs) && parsedLogs.length > 0) {
+            setLogs(parsedLogs);
+            saveLogs(parsedLogs);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
     fetch('/api/logs')
       .then((res) => res.json())
       .then((backendLogs) => {
@@ -241,6 +257,22 @@ export default function App() {
   };
 
   const handleRefreshLogs = useCallback(() => {
+    if (typeof window !== 'undefined' && window.AndroidBridge?.getForwardedLogs) {
+      try {
+        const rawLogs = window.AndroidBridge.getForwardedLogs();
+        if (rawLogs) {
+          const parsedLogs = JSON.parse(rawLogs);
+          if (Array.isArray(parsedLogs)) {
+            setLogs(parsedLogs);
+            saveLogs(parsedLogs);
+            return;
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
     fetch('/api/logs')
       .then((res) => res.json())
       .then((backendLogs) => {
@@ -255,6 +287,13 @@ export default function App() {
   const handleClearLogs = () => {
     setLogs([]);
     saveLogs([]);
+    if (typeof window !== 'undefined' && window.AndroidBridge?.clearForwardedLogs) {
+      try {
+        window.AndroidBridge.clearForwardedLogs();
+      } catch (e) {
+        // ignore
+      }
+    }
     fetch('/api/logs/clear', { method: 'POST' }).catch(() => {});
     showToast(lang === 'ru' ? 'Журнал сообщений успешно очищен' : 'Forwarding history log cleared', 'success');
   };

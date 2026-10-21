@@ -42,7 +42,7 @@ android {
         minSdk = 26
         targetSdk = 34
 
-        val parsedVersionName = (project.findProperty("versionName") as? String) ?: "1.2.0"
+        val parsedVersionName = (project.findProperty("versionName") as? String) ?: "1.3.0"
         val calculatedCode = try {
             val parts = parsedVersionName.replace("^v".toRegex(), "").split(".")
             val major = parts.getOrNull(0)?.toIntOrNull() ?: 1

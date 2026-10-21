@@ -119,6 +119,9 @@ export interface AndroidNativeBridge {
   savePushConfig?: (attachPushPhotos: boolean) => void;
   getInstalledApps?: () => string;
   saveBackupJson?: (jsonContent: string, fileName: string) => void;
+  getForwardedLogs?: () => string;
+  recordForwardedLog?: (logJson: string) => void;
+  clearForwardedLogs?: () => void;
   syncAppRules?: (rulesJson: string) => void;
   getAppVersionName?: () => string;
   openExternalUrl?: (url: string) => void;

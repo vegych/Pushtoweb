@@ -2,7 +2,7 @@
   "name": "pushtoweb",
   "description": "PushToWeb — Real-time SMS and Android Push Notifications to Telegram Forwarder & Gateway with 2FA/OTP extraction and zero telemetry.",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.3.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",

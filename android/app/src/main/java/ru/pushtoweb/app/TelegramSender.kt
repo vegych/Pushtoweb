@@ -33,6 +33,7 @@ object TelegramSender {
     }
 
     fun forwardPayloadSync(
+        context: Context? = null,
         type: String,
         sender: String,
         text: String,
@@ -114,6 +115,9 @@ object TelegramSender {
                         response.close()
 
                         if (responseStr != null && JSONObject(responseStr).optBoolean("ok")) {
+                            if (context != null) {
+                                recordLogToPrefs(context, type, sender, text, appName, packageName, title, operator)
+                            }
                             return
                         }
                     } catch (e: Exception) {
@@ -131,14 +135,61 @@ object TelegramSender {
                 val tgUrl = "$endpoint/bot$botToken/sendMessage"
                 val tgBody = tgJson.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
                 val tgRequest = Request.Builder().url(tgUrl).post(tgBody).build()
-                client.newCall(tgRequest).execute().close()
+                val response = client.newCall(tgRequest).execute()
+                val isSuccess = response.isSuccessful
+                response.close()
+
+                if (isSuccess && context != null) {
+                    recordLogToPrefs(context, type, sender, text, appName, packageName, title, operator)
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
+    private fun recordLogToPrefs(
+        context: Context,
+        type: String,
+        sender: String,
+        text: String,
+        appName: String,
+        packageName: String,
+        title: String,
+        operator: String
+    ) {
+        try {
+            val prefs = context.getSharedPreferences("pushtoweb_logs", Context.MODE_PRIVATE)
+            val currentRaw = prefs.getString("key_logs_json", "[]") ?: "[]"
+            val currentArray = org.json.JSONArray(currentRaw)
+
+            val logEntry = JSONObject().apply {
+                put("id", "log_" + System.currentTimeMillis() + "_" + (1000..9999).random())
+                put("timestamp", System.currentTimeMillis())
+                put("type", type)
+                put("packageName", packageName)
+                put("appName", appName.ifEmpty { if (type == "sms") "SMS" else "Уведомление" })
+                put("sender", sender)
+                put("title", title)
+                put("text", text)
+                put("operator", operator)
+                put("status", "forwarded")
+            }
+
+            val updatedArray = org.json.JSONArray()
+            updatedArray.put(logEntry)
+            for (i in 0 until Math.min(currentArray.length(), 199)) {
+                updatedArray.put(currentArray.get(i))
+            }
+
+            prefs.edit().putString("key_logs_json", updatedArray.toString()).apply()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun forwardPayload(
+        context: Context? = null,
         type: String,
         sender: String,
         text: String,
@@ -149,7 +200,7 @@ object TelegramSender {
         imageBitmap: android.graphics.Bitmap? = null
     ) {
         CoroutineScope(Dispatchers.IO).launch {
-            forwardPayloadSync(type, sender, text, appName, packageName, title, operator, imageBitmap)
+            forwardPayloadSync(context, type, sender, text, appName, packageName, title, operator, imageBitmap)
         }
     }
 }
